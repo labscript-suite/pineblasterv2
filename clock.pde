@@ -1,9 +1,23 @@
-const int max_program_length = 1024;
+const int max_program_length = 102310;
+byte * program_start_addr;
+  
+void start(int autostart){}
 
 void receive_program(int length){
   int i;
-  for (i=0,i<length,i++){
-    while(1)
+  byte b;
+  byte * source = &b;
+  for (i=0;i<length;i++){
+    while(1){
+      if (Serial.available() > 0){
+        b = Serial.read();
+        memcpy(program_start_addr + i, source, 1);
+        break;
+      }
+    }
+  }
+  Serial.println("ok");
+}
 
 String readline(){
   String readstring = "";
@@ -31,14 +45,28 @@ String readline(){
       else{
         readstring += c;
       }
+      
     }
   }
 }
 
 
+
 void setup(){
+  // Partitioning RAM,
+  // see s3.4.3 of the PIC32 reference for details:
+  BMXDKPBA = BMXDRMSZ - max_program_length;
+  BMXDUDBA = BMXDRMSZ;
+  BMXDUPBA = BMXDRMSZ;
+
+  // Get a pointer to the start of program RAM (using 
+  // KSEG1, see s3.4.3.2 of the PIC32 reference for details):
+  program_start_addr = (byte *)(BMXDKPBA + 0xA0000000);
+  
   Serial.begin(115200);
-  Serial.println("hello, bilbo!");
+  Serial.println("hello!");
+  __asm__("WAIT\n\t");
+  Serial.println("hello again!");
 }
 
 
