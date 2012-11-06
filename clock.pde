@@ -1,4 +1,3 @@
-
 const int max_program_length = 102310;
 byte * program_start_addr;
 
@@ -9,13 +8,6 @@ void start(int autostart){
   IPC0 = 0;
   IPC6 = 0;
   attachInterrupt(0,0,RISING);
-  // except for our one:
-  //IEC0bits.INT0IE = 0;
-  //IFS0bits.INT0IF = 0;
-  //INTCONbits.INT0EP = 1;
-  //IPC0bits.INT0IP = _INT0_IPL_IPC;
-  //IPC0bits.INT0IS = _INT0_SPL_IPC;
-  //IEC0bits.INT0IE = 1;
   // wait for it....
   Serial.println("about to wait...");
   __asm__("wait\n\t");
@@ -30,7 +22,6 @@ void start(int autostart){
   // branch delay slot:
   __asm__("nop\n\t");
   // Declare the interrupt as having been handled:
-  IFS0bits.INT0IF=0;
   // Restore other interrupts to their previous state:
   IPC0 = temp_IPC0;
   IPC6 = temp_IPC6;
