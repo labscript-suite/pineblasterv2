@@ -1,17 +1,29 @@
 const int max_program_length = 102310;
 byte * program_start_addr;
   
-void start(int autostart){}
+void start(int autostart){
+  Serial.println("about to jump...");
+  // Load the RAM address of the start of the program into a temporary register:
+  __asm__("lui $t0, 0xa000\n\t");
+  __asm__("ori $t0, 0x7000\n\t");
+  // Jump to the address in that register, and "link" (store a return
+  // address in $ra so we can get back here):
+  __asm__("jalr $t0\n\t");
+  //__asm__("nop\n\t");
+  //__asm__("nop\n\t");
+  Serial.println("got back ok!");
+}
+
+//__asm__("jr $ra");
 
 void receive_program(int length){
   int i;
   byte b;
-  byte * source = &b;
   for (i=0;i<length;i++){
     while(1){
       if (Serial.available() > 0){
         b = Serial.read();
-        memcpy(program_start_addr + i, source, 1);
+        memcpy(program_start_addr + i, &b, 1);
         break;
       }
     }
@@ -58,15 +70,10 @@ void setup(){
   BMXDKPBA = BMXDRMSZ - max_program_length;
   BMXDUDBA = BMXDRMSZ;
   BMXDUPBA = BMXDRMSZ;
-
   // Get a pointer to the start of program RAM (using 
   // KSEG1, see s3.4.3.2 of the PIC32 reference for details):
-  program_start_addr = (byte *)(BMXDKPBA + 0xA0000000);
-  
+  program_start_addr = (byte *)(BMXDKPBA + 0xA0000000); 
   Serial.begin(115200);
-  Serial.println("hello!");
-  __asm__("WAIT\n\t");
-  Serial.println("hello again!");
 }
 
 
@@ -101,4 +108,5 @@ void loop(){
     Serial.println("invalid request");
   }
 }
+
 
