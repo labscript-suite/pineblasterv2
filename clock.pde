@@ -1,12 +1,6 @@
-#include <plib.h>
-
 
 const int max_program_length = 102310;
 byte * program_start_addr;
-
-// This is our handler for the hardware trigger. It does nothing, so that control
-// returns to the program as soon as possible
-void __ISR(_EXTERNAL_0_VECTOR, _INT0_IPL_ISR) ExtInt0Handler(void){Serial.println("In interrupt!");}
 
 void start(int autostart){
   // temporarily disable all interrupts:
@@ -14,15 +8,16 @@ void start(int autostart){
   int temp_IPC6 = IPC6;
   IPC0 = 0;
   IPC6 = 0;
+  attachInterrupt(0,0,RISING);
   // except for our one:
-  IEC0bits.INT0IE = 0;
-  IFS0bits.INT0IF = 0;
-  INTCONbits.INT0EP = 1;
-  IPC0bits.INT0IP = _INT0_IPL_IPC;
-  IPC0bits.INT0IS = _INT0_SPL_IPC;
-  IEC0bits.INT0IE = 1;
+  //IEC0bits.INT0IE = 0;
+  //IFS0bits.INT0IF = 0;
+  //INTCONbits.INT0EP = 1;
+  //IPC0bits.INT0IP = _INT0_IPL_IPC;
+  //IPC0bits.INT0IS = _INT0_SPL_IPC;
+  //IEC0bits.INT0IE = 1;
   // wait for it....
-  __asm__("nop\n\t");
+  Serial.println("about to wait...");
   __asm__("wait\n\t");
   Serial.println("woke up!");
   // Load the RAM address of the start of the program into a temporary register:
