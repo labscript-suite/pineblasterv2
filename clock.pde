@@ -11,7 +11,7 @@ void start(int autostart){
   // wait for it....
   asm volatile ("nop\n\t");
   asm volatile ("wait\n\t");
-  Serial.println("woke up!");
+  //Serial.println("woke up!");
   // Load the RAM address of the start of the program into a temporary register:
   asm volatile ("lui $t0, 0xa000\n\t");
   asm volatile ("ori $t0, 0x7000\n\t");
