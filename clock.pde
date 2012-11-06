@@ -9,12 +9,8 @@ void start(int autostart){
   // Jump to the address in that register, and "link" (store a return
   // address in $ra so we can get back here):
   __asm__("jalr $t0\n\t");
-  //__asm__("nop\n\t");
-  //__asm__("nop\n\t");
   Serial.println("got back ok!");
 }
-
-//__asm__("jr $ra");
 
 void receive_program(int length){
   int i;
@@ -57,12 +53,9 @@ String readline(){
       else{
         readstring += c;
       }
-      
     }
   }
 }
-
-
 
 void setup(){
   // Partitioning RAM,
@@ -75,7 +68,6 @@ void setup(){
   program_start_addr = (byte *)(BMXDKPBA + 0xA0000000); 
   Serial.begin(115200);
 }
-
 
 void loop(){
   String readstring = readline();
@@ -108,5 +100,4 @@ void loop(){
     Serial.println("invalid request");
   }
 }
-
 
