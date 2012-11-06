@@ -9,6 +9,8 @@ void start(int autostart){
   // Jump to the address in that register, and "link" (store a return
   // address in $ra so we can get back here):
   __asm__("jalr $t0\n\t");
+  // Branch delay slot:
+  __asm__("nop\n\t");
   Serial.println("got back ok!");
 }
 
