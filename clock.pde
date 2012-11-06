@@ -9,18 +9,18 @@ void start(int autostart){
   IPC6 = 0;
   attachInterrupt(0,0,RISING);
   // wait for it....
-  Serial.println("about to wait...");
-  __asm__("wait\n\t");
+  asm volatile ("nop\n\t");
+  asm volatile ("wait\n\t");
   Serial.println("woke up!");
   // Load the RAM address of the start of the program into a temporary register:
-  __asm__("lui $t0, 0xa000\n\t");
-  __asm__("ori $t0, 0x7000\n\t");
+  asm volatile ("lui $t0, 0xa000\n\t");
+  asm volatile ("ori $t0, 0x7000\n\t");
   // go!
   // Jump to the address in that register, and "link" (store a return
   // address in $ra so we can get back here):
-  __asm__("jalr $t0\n\t");
+  asm volatile ("jalr $t0\n\t");
   // branch delay slot:
-  __asm__("nop\n\t");
+  asm volatile ("nop\n\t");
   // Declare the interrupt as having been handled:
   // Restore other interrupts to their previous state:
   IPC0 = temp_IPC0;
