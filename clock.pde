@@ -8,23 +8,28 @@ void start(int autostart){
   IPC0 = 0;
   IPC6 = 0;
   attachInterrupt(0,0,RISING);
-  // wait for it....
-  asm volatile ("nop\n\t");
-  asm volatile ("wait\n\t");
-  //Serial.println("woke up!");
-  // Load the RAM address of the start of the program into a temporary register:
+  // Load the RAM address of the start of the program into a temporary
+  // register. We'll jump to it in a sec:
   asm volatile ("lui $t0, 0xa000\n\t");
   asm volatile ("ori $t0, 0x7000\n\t");
+  asm volatile ("nop\n\t");
+  if(autostart==0){
+      // wait for it....
+      asm volatile ("wait\n\t");
+  }
+  // disable all interrupts now:
+  asm volatile("di\n\t");
   // go!
-  // Jump to the address in that register, and "link" (store a return
-  // address in $ra so we can get back here):
   asm volatile ("jalr $t0\n\t");
   // branch delay slot:
   asm volatile ("nop\n\t");
-  // Declare the interrupt as having been handled:
   // Restore other interrupts to their previous state:
   IPC0 = temp_IPC0;
   IPC6 = temp_IPC6;
+  // detach our interrupt:
+  detachInterrupt(0);
+  // re-enable global interrupts"
+  asm volatile("ei\n\t");
   Serial.println("got back ok!");
 }
 
