@@ -53,8 +53,11 @@ void start(int autostart){
   // go low by writing the contents of $t0 (0xff) to the RAM address in $t1 (that of LATAINV):
   asm ("sw $t0, 0($t1)\n\t"); 
   // wait for delay_time ($t3):
-  asm ("low_delay: bne $t5, $zero, low_delay\n\t");
+  asm ("low_delay: bne $t5, $t6, low_delay\n\t");
   asm ("addi $t5, -1");
+  // repeat until reps is zero:
+  asm ("bne $t4, $zero, top_of_loop\n\t");
+  asm ("addi $t4, -1\n\t");
   
 
   
