@@ -1,58 +1,59 @@
-const int max_program_length = 102310;
-byte * program_start_addr;
+const unsigned int max_instructions = 200;
 
-void start(int autostart){
-  // temporarily disable all interrupts:
-  int temp_IPC0 = IPC0;
-  int temp_IPC6 = IPC6;
-  IPC0 = 0;
-  IPC6 = 0;
-  attachInterrupt(0,0,RISING);
-  // Load the RAM address of the start of the program into a temporary
-  // register. We'll jump to it in a sec:
-  asm volatile ("lui $t0, 0xa000\n\t");
-  asm volatile ("ori $t0, 0x7000\n\t");
-  asm volatile ("nop\n\t");
-  if(autostart==0){
-      // wait for it....
-      asm volatile ("wait\n\t");
-  }
-  // disable all interrupts now:
-  asm volatile("di\n\t");
-  // go!
-  asm volatile ("jalr $t0\n\t");
-  // branch delay slot:
-  asm volatile ("nop\n\t");
-  // Restore other interrupts to their previous state:
-  IPC0 = temp_IPC0;
-  IPC6 = temp_IPC6;
-  // detach our interrupt:
-  detachInterrupt(0);
-  // re-enable global interrupts"
-  asm volatile("ei\n\t");
-  Serial.println("got back ok!");
-}
+// These must be global so they can be read 
+// by the interpreter in run() and written to
+// by the server in loop():
+unsigned int array_delay_time[max_instructions];
+unsigned int array_reps[max_instructions];
 
-void receive_program(int length){
-  int i;
-  byte b;
-  for (i=0;i<length;i++){
-    while(1){
-      if (Serial.available() > 0){
-        b = Serial.read();
-        memcpy(program_start_addr + i, &b, 1);
-        break;
-      }
+// These must be global so they can be set by the 
+// start() function, but subsequently used by the 
+// run() function, which is called as an interrupt
+// in the case of a hardware-triggered run:
+// TODO: ensure being global doesn't increase variable access time
+
+void start(byte autostart){
+  // set the values required by the firt iteration of the loop in run():
+  unsigned int delay_time = array_delay_time[0];
+  unsigned int delay_counter = 0; 
+  unsigned int reps = array_reps[0];
+  unsigned int j = 0;
+  Serial.println("ok");
+  // disable all interrupts:
+  while (1){
+    // Go high:
+    LATA = 0x08;
+    // Wait:
+    while(1){__asm__(" ");if (++delay_counter==delay_time){break;}}
+    // Go low:
+    LATA = 0;
+    while(1){__asm__(" ");if (--delay_counter==0){break;}}
+    // Done enough clock ticks yet?
+    if (--reps==0){
+      // Load in the next round of clock ticks:
+      ++j;
+      delay_time = array_delay_time[j];
+      reps = array_reps[j];
+      if (reps==0){break;}
+    }
+    else{
+      // Some no-ops here to ensure all ticks are as slow as the last tick
+      __asm__("nop\n\t");
+      __asm__("nop\n\t");
+      __asm__("nop\n\t");
+      __asm__("nop\n\t");
+      __asm__("nop\n\t");
+      __asm__("nop\n\t");
     }
   }
-  Serial.println("ok");
 }
+
 
 String readline(){
   String readstring = "";
   char c;
   byte crfound = 0;
-  while (1){
+  while (true){
     if (Serial.available() > 0){
       char c = Serial.read();
       if (c == '\r'){
@@ -79,19 +80,12 @@ String readline(){
 }
 
 void setup(){
-  // Partitioning RAM,
-  // see s3.4.3 of the PIC32 reference for details:
-  BMXDKPBA = BMXDRMSZ - max_program_length;
-  BMXDUDBA = BMXDRMSZ;
-  BMXDUPBA = BMXDRMSZ;
-  // Get a pointer to the start of program RAM (using 
-  // KSEG1, see s3.4.3.2 of the PIC32 reference for details):
-  program_start_addr = (byte *)(BMXDKPBA + 0xA0000000); 
   Serial.begin(115200);
+  pinMode(13, OUTPUT);
+  digitalWrite(13,LOW);
 }
 
 void loop(){
-  Serial.println("in loop!");
   String readstring = readline();
   if (readstring == "hello"){
     Serial.println("hello");
@@ -102,24 +96,29 @@ void loop(){
   else if ((readstring == "start") || (readstring == "")){
     start(1);
   }
-  else if (readstring.startsWith("program ")){
+  else if (readstring.startsWith("set ")){
     int firstspace = readstring.indexOf(' ');;
-    if (firstspace == -1){
+    int secondspace = readstring.indexOf(' ', firstspace+1);
+    int thirdspace = readstring.indexOf(' ', secondspace+1);
+    if (secondspace == -1 || thirdspace == -1){
       Serial.println("invalid request");
       return;
     }
-    int length = readstring.substring(firstspace+1).toInt();
-    
-    if (length >= max_program_length){
-      Serial.println("program is too long");
+    unsigned int addr = readstring.substring(firstspace+1, secondspace).toInt();
+    unsigned int delay_time = readstring.substring(secondspace+1, thirdspace).toInt();
+    unsigned int reps = readstring.substring(thirdspace+1).toInt();
+    if (addr >= max_instructions){
+      Serial.println("invalid address");
     }
     else{
+      array_delay_time[addr] = delay_time;
+      array_reps[addr] = reps;
       Serial.println("ok");
-      receive_program(length);
     }
   }
   else{
     Serial.println("invalid request");
   }
 }
+
 
