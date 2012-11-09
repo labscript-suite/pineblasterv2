@@ -46,8 +46,14 @@ void start(int autostart){
   asm volatile ("li $t6, 0x1\n\t");
   // start of the while loop:
   // go high by writing the contents of $t0 (0xff) to the RAM address in $t1 (that of LATAINV):
+  asm volatile ("again: nop\n\t");
+  asm volatile ("nop\n\t");
+  asm volatile ("nop\n\t");
+  asm volatile ("nop\n\t");
+  asm volatile ("nop\n\t");
+  asm volatile ("nop\n\t");
   asm volatile ("top_of_loop: sw $t0, 0($t1)\n\t"); 
-  // wait for delay_time ($t3) (actually 2*$t3 + 3 instructions):
+  // wait for delay_time ($t3) (actually 2*$t3 + 2 instructions):
   asm volatile ("high_delay: bne $t5, $t3, high_delay\n\t");
   asm volatile ("addi $t5, 1\n\t");
   // go low by writing the contents of $t0 (0xff) to the RAM address in $t1 (that of LATAINV):
@@ -56,26 +62,18 @@ void start(int autostart){
   asm volatile ("low_delay: bne $t5, $t6, low_delay\n\t");
   asm volatile ("addi $t5, -1");
   // break if reps is 1:
-  asm volatile ("beq $t4, $t6, break\n\t");
-  // otherwise, some no_ops:
+  asm volatile ("bne $t4, $t6, again\n\t");
   asm volatile ("addi $t4, -1\n\t");
-  asm volatile ("nop\n\t");
-  asm volatile ("nop\n\t");
-  asm volatile ("nop\n\t");
-  asm volatile ("nop\n\t");
-  asm volatile ("j top_of_loop\n\t");
-  asm volatile ("nop\n\t");
-  // increment our instruction pointer:
-  asm volatile ("break: addi $t2, 8\n\t");
   // load the the next reps in:
-  asm volatile ("lw $t4, 4($t2)\n\t"); 
+  asm volatile ("lw $t4, 12($t2)\n\t"); 
+  // increment our instruction pointer:
+  asm volatile ("addi $t2, 8\n\t");
   // go to the top of the loop if it's not a stop instruction:
   asm volatile ("bne $t4, $zero, top_of_loop\n\t");
   // load the next delay time in:
-  asm volatile ("lw $t3, 0($t2)\n\t"); 
-  asm volatile ("nop\n\t");
-
-  
+  asm volatile ("lw $t3, 0($t2)\n\t");
+  // go low:
+  asm volatile ("sw $t0, 0($t1)\n\t"); 
 
   //while (1){
   //  // Go high:
