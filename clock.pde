@@ -28,6 +28,9 @@ void start(int autostart){
   //detachInterrupt(0);
   //Serial.println("woke up!");
  
+  // Disable predictive prefetching:
+  // CHECONCLR = _CHECON_PREFEN_MASK;
+  // Serial.println(CHECON, BIN);
   // don't fill our branch delay slots with nops, thank you very much:
   asm volatile (".set noreorder\n\t");
   // load the value 0xff into register $t0:
@@ -36,21 +39,16 @@ void start(int autostart){
   asm volatile ("li $t1, 0xBF88602C\n\t");
   // load the address of the instruction array into register $t2:
   asm volatile ("la $t2, instructions\n\t");
-  // load the delay time into register $t3:
-  asm volatile ("lw $t3, 0($t2)\n\t"); 
   // load the reps into register $t4:
   asm volatile ("lw $t4, 4($t2)\n\t"); 
+  // load the delay time into register $t3:
+  asm volatile ("again: lw $t3, 0($t2)\n\t"); 
   // load the delay loop counter (initially zero) into register $t5:
   asm volatile ("li $t5, 0x0\n\t");
   // store one into register $t6:
   asm volatile ("li $t6, 0x1\n\t");
   // start of the while loop:
   // go high by writing the contents of $t0 (0xff) to the RAM address in $t1 (that of LATAINV):
-  asm volatile ("again: nop\n\t");
-  asm volatile ("nop\n\t");
-  asm volatile ("nop\n\t");
-  asm volatile ("nop\n\t");
-  asm volatile ("nop\n\t");
   asm volatile ("nop\n\t");
   asm volatile ("top_of_loop: sw $t0, 0($t1)\n\t"); 
   // wait for delay_time ($t3) (actually 2*$t3 + 2 instructions):
