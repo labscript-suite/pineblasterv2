@@ -28,9 +28,6 @@ void start(int autostart){
   //detachInterrupt(0);
   //Serial.println("woke up!");
  
-  // Disable predictive prefetching:
-  // CHECONCLR = _CHECON_PREFEN_MASK;
-  // Serial.println(CHECON, BIN);
   // don't fill our branch delay slots with nops, thank you very much:
   asm volatile (".set noreorder\n\t");
   // load the value 0xff into register $t0:
