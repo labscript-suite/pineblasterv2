@@ -25,44 +25,35 @@ void start(int autostart){
   T2CONSET = 0x8000; 
   OC2CONSET = 0x8000; 
 
-
-//
-//  // set the timer to 32 bit, and enable:
-//  T2CON = _BV(3) | _BV(15);
-//  T3CON = _BV(15);
-//  // set to toggle on compare, and enable:
-//  OC2CONSET = _BV(15);
-
-
-//  // don't fill our branch delay slots with nops, thank you very much:
-//  asm volatile (".set noreorder\n\t");
-//  // load the ram address of PR2 into register $t0:
-//  asm volatile ("la $t0, PR2\n\t");
-//  // load the ram address of OC2R into register $t1:
-//  asm volatile ("la $t1, OC2R\n\t");
-//  // load the address of the instruction array into register $t2:
-//  asm volatile ("la $t2, instructions\n\t");
-//  // load the half-period time into register $t3:
-//  asm volatile ("lw $t3, 0($t2)\n\t"); 
-//  // load the delay time into register $t4:
-//  asm volatile ("lw $t4, 4($t2)\n\t"); 
-//  
-//  // update the period of the output:
-//  asm volatile ("top: sw $t3, 0($t0)\n\t"); 
-//  asm volatile ("sw $t3, 0($t1)\n\t");
-//  // wiat for the delay time:
-//  asm volatile ("wait_loop: bne $t4, $zero, wait_loop\n\t");
-//  asm volatile ("addi $t4, -1\n\t");
-//  //load the the next delay time in:
-//  asm volatile ("lw $t4, 12($t2)\n\t"); 
-//  // increment our instruction pointer:
-//  asm volatile ("addi $t2, 8\n\t");
-//  // go to the top of the loop if it's not a stop instruction:
-//  asm volatile ("bne $t4, $zero, top\n\t");
-//  // load the next half-period in:
-//  asm volatile ("lw $t3, 0($t2)\n\t");
+  // don't fill our branch delay slots with nops, thank you very much:
+  asm volatile (".set noreorder\n\t");
+  // load the ram address of PR2 into register $t0:
+  asm volatile ("la $t0, PR2\n\t");
+  // load the ram address of OC2R into register $t1:
+  asm volatile ("la $t1, OC2R\n\t");
+  // load the address of the instruction array into register $t2:
+  asm volatile ("la $t2, instructions\n\t");
+  // load the half-period time into register $t3:
+  asm volatile ("lw $t3, 0($t2)\n\t"); 
+  // load the delay time into register $t4:
+  asm volatile ("lw $t4, 4($t2)\n\t"); 
+  
+  // update the period of the output:
+  asm volatile ("top: sw $t3, 0($t0)\n\t"); 
+  asm volatile ("sw $t3, 0($t1)\n\t");
+  // wiat for the delay time:
+  asm volatile ("wait_loop: bne $t4, $zero, wait_loop\n\t");
+  asm volatile ("addi $t4, -1\n\t");
+  // increment our instruction pointer:
+  asm volatile ("addi $t2, 8\n\t");
+  //load the the next delay time in:
+  asm volatile ("lw $t4, 4($t2)\n\t"); 
+  // go to the top of the loop if it's not a stop instruction:
+  asm volatile ("bne $t4, $zero, top\n\t");
+  // load the next half-period in:
+  asm volatile ("lw $t3, 0($t2)\n\t");
 //  // turn everything off:
-//  OC2CONCLR = _BV(15);
+  OC2CON = 0; 
   interrupts();
 }
 
