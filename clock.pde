@@ -17,14 +17,15 @@ void start(int autostart){
   T2CON = 0x0008;
   OC2CON = 0x0000; 
   OC2CON = 0x0023; 
-  OC2R = 10;
-  PR2 = 10;
+  OC2R = 0;
+  PR2 = 0;
   TMR2 = 0;
   TMR3 = 0;
   asm volatile ("nop\n\t");
   T2CONSET = 0x8000; 
   OC2CONSET = 0x8000; 
-
+  asm volatile ("nop\n\t");
+  asm volatile ("nop\n\t");
   // don't fill our branch delay slots with nops, thank you very much:
   asm volatile (".set noreorder\n\t");
   // load the ram address of PR2 into register $t0:
@@ -44,15 +45,15 @@ void start(int autostart){
   // wiat for the delay time:
   asm volatile ("wait_loop: bne $t4, $zero, wait_loop\n\t");
   asm volatile ("addi $t4, -1\n\t");
+  // load the next half-period in:
+  asm volatile ("lw $t3, 8($t2)\n\t");
   // increment our instruction pointer:
   asm volatile ("addi $t2, 8\n\t");
+  // go to the top of the loop if it's not a stop instruction:
+  asm volatile ("bne $t3, $zero, top\n\t");
   //load the the next delay time in:
   asm volatile ("lw $t4, 4($t2)\n\t"); 
-  // go to the top of the loop if it's not a stop instruction:
-  asm volatile ("bne $t4, $zero, top\n\t");
-  // load the next half-period in:
-  asm volatile ("lw $t3, 0($t2)\n\t");
-//  // turn everything off:
+  // turn everything off:
   OC2CON = 0; 
   interrupts();
 }
@@ -126,7 +127,7 @@ void loop(){
     }
     else{
       instructions[2*addr] = delay_time;
-      instructions[2*addr+1] = delay_time*reps - 4;
+      instructions[2*addr+1] = reps;
       Serial.println("ok");
     }
   }
