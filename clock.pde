@@ -126,8 +126,8 @@ void loop(){
       Serial.println("invalid address");
     }
     else{
-      instructions[2*addr] = delay_time;
-      instructions[2*addr+1] = reps;
+      instructions[2*addr] = delay_time - 1;
+      instructions[2*addr+1] = delay_time*reps - 4;
       Serial.println("ok");
     }
   }
