@@ -10,7 +10,10 @@ const unsigned int max_instructions = 200;
 int autostart;
 unsigned int instructions[max_instructions];
 
-//void __attribute__((naked, at_vector(_EXTERNAL_0_VECTOR))) ExtInt0Handler(void){asm ("eret");}
+void __attribute__((naked, at_vector(3))) MyInt0Handler(void){
+  asm volatile ("j top\n\t");
+  asm volatile ("nop\n\t");
+}
 
 void start(){
   // set the values required by the first iteration of the loop in run():
@@ -79,6 +82,8 @@ void start(){
   IPC0 = temp_IPC0;
   IPC6 = temp_IPC6;
 }
+
+
 
 
 String readline(){
