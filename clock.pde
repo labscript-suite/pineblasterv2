@@ -1,3 +1,10 @@
+//#include <SPI.h>
+//#include <Ethernet.h>
+
+//byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+//byte ip[] = { 192,168,1, 177 };
+//Server server(8000);
+
 const unsigned int max_instructions = 200;
 
 // These must be global so they can be read 
@@ -6,6 +13,7 @@ const unsigned int max_instructions = 200;
 unsigned int instructions[max_instructions];
 
 void start(int autostart){
+  digitalWrite(3,LOW);
   // set the values required by the firt iteration of the loop in run():
   Serial.println("ok");
   noInterrupts();
@@ -90,6 +98,9 @@ String readline(){
 }
 
 void setup(){
+  // start the Ethernet connection and the server:
+  //Ethernet.begin(mac, ip);
+  //server.begin();
   Serial.begin(115200);
   int i = 0;
   for (i=0;i<86;i++){
@@ -131,6 +142,15 @@ void loop(){
       Serial.println("ok");
     }
   }
+  else if (readstring == "go high"){
+    digitalWrite(3,HIGH);
+    Serial.println("ok");
+  }
+  else if (readstring == "go low"){
+    digitalWrite(3,LOW);
+    Serial.println("ok");
+  }
+  
   else{
     Serial.println("invalid request");
   }
