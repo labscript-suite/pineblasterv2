@@ -1,3 +1,4 @@
+#include <plib.h>
 //#include <SPI.h>
 //#include <Ethernet.h>
 
@@ -6,14 +7,12 @@
 //Server server(8000);
 
 const unsigned int max_instructions = 200;
-
-// These must be global so they can be read 
-// by the interpreter in run() and written to
-// by the server in loop():
+int autostart;
 unsigned int instructions[max_instructions];
 
+//void __attribute__((naked, at_vector(_EXTERNAL_0_VECTOR))) ExtInt0Handler(void){asm ("eret");}
 
-void start(int autostart){
+void start(){
   // set the values required by the first iteration of the loop in run():
   Serial.println("ok");
   // temporarily disable all interrupts:
@@ -24,7 +23,7 @@ void start(int autostart){
   
   // except for our one:
   attachInterrupt(0,0,RISING);
-    
+
   // 32 bit mode, no prescaler:
   T2CON = 0x0008;
   OC2CON = 0x0000; 
@@ -38,7 +37,7 @@ void start(int autostart){
   OC2CONSET = 0x8000; 
   
   // don't fill our branch delay slots with nops, thank you very much:
-  asm volatile (".set noreorder\n\t");
+  asm volatile (".set noreorder\n\t":::"t0","t1","t2","t3","t4", "t5");
   // load the ram address of PR2 into register $t0:
   asm volatile ("la $t0, PR2\n\t");
   // load the ram address of OC2R into register $t1:
@@ -49,8 +48,15 @@ void start(int autostart){
   asm volatile ("lw $t3, 0($t2)\n\t"); 
   // load the delay time into register $t4:
   asm volatile ("lw $t4, 4($t2)\n\t"); 
- 
-  // wait for it...
+  // load the the autostart flag into register $t5:
+  asm volatile ("la $t5, autostart\n\t");
+  asm volatile ("lw $t5, 0($t5)\n\t");
+  
+  // if we're set to autostart, jump right in:
+  asm volatile ("bne $t5, $zero, top\n\t");
+  asm volatile ("nop\n\t");
+  
+  // otherwise wait for it...
   asm volatile ("wait\n\t");
     
   // update the period of the output:
@@ -125,10 +131,12 @@ void loop(){
     Serial.println("hello");
   }
   else if (readstring == "hwstart"){
-    start(0);
+    autostart = 0;
+    start();
   }
   else if ((readstring == "start") || (readstring == "")){
-    start(1);
+    autostart = 1;
+    start();
   }
   else if (readstring.startsWith("set ")){
     int firstspace = readstring.indexOf(' ');;
