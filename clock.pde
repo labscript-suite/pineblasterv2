@@ -12,15 +12,37 @@ const unsigned int max_instructions = 200;
 // by the server in loop():
 unsigned int instructions[max_instructions];
 
+void trigger(){
+  // disable this interrupt so it doesn't happen again:
+  IEC0bits.INT1IE = 0;
+}
+
 void start(int autostart){
-  digitalWrite(3,LOW);
-  // set the values required by the firt iteration of the loop in run():
+  //digitalWrite(3,LOW);
+  // set the values required by the first iteration of the loop in run():
   Serial.println("ok");
-  noInterrupts();
-    
+  // temporarily disable all interrupts:
+  //int temp_IPC0 = IPC0;
+  //int temp_IPC6 = IPC6;
+  //IPC0 = 0;
+  //IPC6 = 0;
+  // except for our one:
+  //attachInterrupt(1,trigger,RISING);
+  //asm volatile ("wait\n\t");
+  //Serial.println("woke up!");
+  
+  //IEC0bits.INT0IE = 0;
+  //IFS0bits.INT0IF = 0;
+  //INTCONbits.INT0EP = 1;
+  //IPC0bits.INT0IP = _INT0_IPL_IPC;
+  //IPC0bits.INT0IS = _INT0_SPL_IPC;
+  //IEC0bits.INT0IE = 1;
+  // wait for it....
+   
   LATA = 0xffff;
   asm volatile ("nop\n\t");
   LATA = 0;
+  
   // 32 bit mode, no prescaler:
   T2CON = 0x0008;
   OC2CON = 0x0000; 
@@ -46,7 +68,8 @@ void start(int autostart){
   asm volatile ("lw $t3, 0($t2)\n\t"); 
   // load the delay time into register $t4:
   asm volatile ("lw $t4, 4($t2)\n\t"); 
-  
+ 
+
   // update the period of the output:
   asm volatile ("top: sw $t3, 0($t0)\n\t"); 
   asm volatile ("sw $t3, 0($t1)\n\t");
@@ -63,7 +86,9 @@ void start(int autostart){
   asm volatile ("lw $t4, 4($t2)\n\t"); 
   // turn everything off:
   OC2CON = 0; 
-  interrupts();
+  // Restore other interrupts to their previous state:
+  //IPC0 = temp_IPC0;
+  //IPC6 = temp_IPC6;
 }
 
 
@@ -135,6 +160,9 @@ void loop(){
     unsigned int reps = readstring.substring(thirdspace+1).toInt();
     if (addr >= max_instructions){
       Serial.println("invalid address");
+    }
+    else if (delay_time < 4){
+      Serial.println("period too short");
     }
     else{
       instructions[2*addr] = delay_time - 1;
