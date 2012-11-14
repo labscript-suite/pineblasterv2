@@ -10,9 +10,56 @@ const unsigned int max_instructions = 200;
 int autostart;
 unsigned int instructions[max_instructions];
 
-void __attribute__((naked, at_vector(3))) MyInt0Handler(void){
-  asm volatile ("j top\n\t");
+void __attribute__((naked, at_vector(3), nomips16)) ExtInt0Handler(void){
+  asm volatile (".set noreorder\n\t");
+  asm volatile ("j foo\n\t");
   asm volatile ("nop\n\t");
+}
+
+void __attribute__((naked, nomips16)) Foo(void){
+  asm volatile (".set noreorder\n\t");
+  asm volatile ("foo:\n\t");
+  // interrupt prelude code:
+  asm volatile ("rdpgpr	$sp, $sp\n\t"); // read stack pointer from previous shadow set
+  asm volatile ("mfc0	$k0, $14\n\t"); // read in the EPC register
+  asm volatile ("mfc0	$k1, $12\n\t"); // read in the Status register
+  asm volatile ("addiu	$sp, $sp,-24\n\t"); // push in the stack (enough for six register's worth)
+  asm volatile ("sw	$k0, 20($sp)\n\t"); // save EPC to the stack
+  asm volatile ("sw	$k1, 16($sp)\n\t"); // save Status to the stack
+  asm volatile ("ins	$k1, $zero, 0x1, 0xf\n\t"); // write zeros to bits 1-16 of our copy of Status
+  asm volatile ("ori	$k1, $k1, 0x1000\n\t"); // write a 1 to the 17th bit of our copy of Status
+  asm volatile ("mtc0	$k1, $12\n\t"); // set out modified Status as the system Status
+  asm volatile ("sw	$s8, 12($sp)\n\t"); // save $s8, to the stack
+  asm volatile ("sw	$v1, 8($sp)\n\t"); // save $v1 (function return registers..?) to the stack
+  asm volatile ("sw	$v0, 4($sp)\n\t"); // save $v2 to the stack
+  asm volatile ("move	$s8, $sp\n\t"); // copy the stack pointer to $s8 (frame pointer register)
+
+  
+  // clear the bit saying we've handled the interrupt:
+  asm volatile ("lui	$v1, 0xbf88\n\t"); // load half of the address of IFS0
+  asm volatile ("lw	$v0, 4144($v1)\n\t"); // load in IFS0
+  asm volatile ("ins	$v0, $zero,0x3,0x1\n\t"); // flip the appropriate bit in our copy of IFS0
+  asm volatile ("sw	$v0, 4144($v1)\n\t"); // write this back 
+  
+  // actual interrupt code:
+  asm volatile ("la $v1, LATAINV\n\t");
+  asm volatile ("ori $v0, $zero, 0xffff\n\t");
+  asm volatile ("sw $v0, 0($v1)\n\t");  // toggle the led
+  
+  asm volatile ("move	$sp, $s8\n\t"); // restore the stack pointer
+  asm volatile ("lw	$s8, 12($sp)\n\t"); // restore s8 (previous stack pointer)
+  asm volatile ("lw	$v1, 8($sp)\n\t"); // restore v1
+  asm volatile ("lw	$v0, 4($sp)\n\t"); // restore v2
+  asm volatile ("di\n\t"); // disable interrupts
+  asm volatile ("ehb\n\t"); // execution hazard...?
+  asm volatile ("lw	$k0, 20($sp)\n\t"); // restore k0 from the stack
+  asm volatile ("lw	$k1, 16($sp)\n\t"); // restore k1 from the stack
+  asm volatile ("mtc0	$k0, $14\n\t"); // restore EPC
+  asm volatile ("addiu	$sp, $sp,24\n\t"); // pop out of the stack
+  asm volatile ("wrpgpr	$sp, $sp\n\t"); // write the stack pointer back to previous shadow register set
+  asm volatile ("mtc0	$k1, $12\n\t"); // restore Status
+  asm volatile ("eret\n\t"); // return
+
 }
 
 void start(){
@@ -128,9 +175,11 @@ void setup(){
   }
   //pinMode(3, INPUT);
   //digitalWrite(3,LOW);
+  attachInterrupt(0,0,RISING);
 }
 
 void loop(){
+  Serial.println("in mainloop!");
   String readstring = readline();
   if (readstring == "hello"){
     Serial.println("hello");
