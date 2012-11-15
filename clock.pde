@@ -20,34 +20,17 @@ void __attribute__((naked, nomips16)) Foo(void){
   asm volatile (".set noreorder\n\t");
   asm volatile ("foo:\n\t");
   // interrupt prelude code:
-  asm volatile ("addiu	$sp, $sp,-24\n\t"); // push in the stack (enough for six register's worth)
-
-  asm volatile ("mtc0	$k1, $12\n\t"); // set our modified Status as the system Status
-  asm volatile ("sw	$v1, 8($sp)\n\t"); // save $v1 (function return registers..?) to the stack
-  asm volatile ("sw	$v0, 4($sp)\n\t"); // save $v2 to the stack
-
-  
-  // clear the bit saying we've handled the interrupt:
-  asm volatile ("la	$v1, IFS0\n\t"); // load the address of IFS0
-  asm volatile ("li	$v0, 0x10088880\n\t"); // the value of IFSO we need to indicate we've serviced the interrupt
-  asm volatile ("sw	$v0, 0($v1)\n\t"); // write this back 
-  
-  // save the original status so we can read it elsewhere:
-  asm volatile ("la $v1, status_\n\t");
-  asm volatile ("sw $v0, 0($v1)");
+  asm volatile ("mtc0	$k0, $12\n\t"); // set our modified Status as the system Status
+  asm volatile ("sw	$v1, 0($v0)\n\t"); // say that we've finished handling the interrupt
   
   // actual interrupt code:
   asm volatile ("la $v1, LATAINV\n\t");
   asm volatile ("ori $v0, $zero, 0xffff\n\t");
   asm volatile ("sw $v0, 0($v1)\n\t");  // toggle the led
-  
-  
-  
-  asm volatile ("lw	$v1, 8($sp)\n\t"); // restore v1
-  asm volatile ("lw	$v0, 4($sp)\n\t"); // restore v2
-  asm volatile ("li	$k1, 0x100003\n\t"); // The status we need to write back to say we've finished the interrupt
-  asm volatile ("addiu	$sp, $sp,24\n\t"); // pop out of the stack
+    
   asm volatile ("mtc0	$k1, $12\n\t"); // restore Status
+  
+  asm volatile("sw $zero, 0($t0)\n\t"); // disable this interrupt, so it doesn't happen again before we're ready 
   asm volatile ("eret\n\t"); // return
 
 }
@@ -173,8 +156,17 @@ void setup(){
 volatile int status_;
   
 void loop(){
-   asm volatile ("li     $k1, 0x101001\n\t"); // the modified status we need to write to acknowledge that we're servicing the interrupt
+   asm volatile ("la $t0, IPC0\n\t");
+   asm volatile ("lw $t1, 0($t0)\n\t");
+   asm volatile ("mainloop:\n\t");
+   asm volatile ("li    $k0, 0x101001\n\t"); // the status we need to write to acknowledge that we're servicing the interrupt
+   asm volatile ("li	$k1, 0x100003\n\t"); // The status we need to write to say we've finished the interrupt
+   asm volatile ("la	$v0, IFS0\n\t"); // load the address of IFS0
+   asm volatile ("li	$v1, 0x10088880\n\t"); // the value of IFSO we need to indicate we've serviced the interrupt
+   asm volatile ("sw $t1, 0($t0)\n\t");
    asm volatile ("wait\n\t");
+   asm volatile ("j mainloop\n\t");
+   asm volatile ("nop\n\t");
 }
 //  Serial.println("in mainloop!");
 //  String readstring = readline();
