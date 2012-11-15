@@ -22,6 +22,7 @@ void __attribute__((naked, nomips16)) Foo(void){
   // interrupt prelude code:
   asm volatile ("addiu	$sp, $sp,-24\n\t"); // push in the stack (enough for six register's worth)
 
+ 
   asm volatile ("li     $k1, 0x101001\n\t"); // the modified status we need to write to acknowledge that we're servicing the interrupt
   asm volatile ("mtc0	$k1, $12\n\t"); // set our modified Status as the system Status
   asm volatile ("sw	$v1, 8($sp)\n\t"); // save $v1 (function return registers..?) to the stack
@@ -29,10 +30,13 @@ void __attribute__((naked, nomips16)) Foo(void){
 
   
   // clear the bit saying we've handled the interrupt:
-  asm volatile ("lui	$v1, 0xbf88\n\t"); // load half of the address of IFS0
-  asm volatile ("lw	$v0, 4144($v1)\n\t"); // load in IFS0
-  asm volatile ("ins	$v0, $zero,0x3,0x1\n\t"); // flip the appropriate bit in our copy of IFS0
-  asm volatile ("sw	$v0, 4144($v1)\n\t"); // write this back 
+  asm volatile ("la	$v1, IFS0\n\t"); // load the address of IFS0
+  asm volatile ("li	$v0, 0x10088880\n\t"); // the value of IFSO we need to indicate we've serviced the interrupt
+  asm volatile ("sw	$v0, 0($v1)\n\t"); // write this back 
+  
+  // save the original status so we can read it elsewhere:
+  asm volatile ("la $v1, status_\n\t");
+  asm volatile ("sw $v0, 0($v1)");
   
   // actual interrupt code:
   asm volatile ("la $v1, LATAINV\n\t");
@@ -162,8 +166,8 @@ void setup(){
     digitalWrite(i,LOW);
   }
   // disable all interrupts:
-  //IPC0 = 0;
-  //IPC6 = 0;
+  IPC0 = 0;
+  IPC6 = 0;
   // except ours:
   attachInterrupt(0,0,RISING);
 }
@@ -171,8 +175,7 @@ void setup(){
 volatile int status_;
   
 void loop(){
-  String readstring = readline();
-  Serial.println(status_, HEX);
+   asm volatile ("wait\n\t")
 }
 //  Serial.println("in mainloop!");
 //  String readstring = readline();
