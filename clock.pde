@@ -20,9 +20,7 @@ void __attribute__((naked, nomips16)) Foo(void){
   asm volatile (".set noreorder\n\t");
   asm volatile ("foo:\n\t");
   // interrupt prelude code:
-  asm volatile ("mfc0	$k1, $12\n\t"); // read in the Status register
   asm volatile ("addiu	$sp, $sp,-24\n\t"); // push in the stack (enough for six register's worth)
-  asm volatile ("sw	$k1, 16($sp)\n\t"); // save Status to the stack
 
   asm volatile ("li     $k1, 0x101001\n\t"); // the modified status we need to write to acknowledge that we're servicing the interrupt
   asm volatile ("mtc0	$k1, $12\n\t"); // set our modified Status as the system Status
@@ -41,13 +39,11 @@ void __attribute__((naked, nomips16)) Foo(void){
   asm volatile ("ori $v0, $zero, 0xffff\n\t");
   asm volatile ("sw $v0, 0($v1)\n\t");  // toggle the led
   
-  // save the modified status so we can read it elsewhere:
-  asm volatile ("la $v0, status_\n\t");
-  asm volatile ("sw $k1, 0($v0)");
+  
   
   asm volatile ("lw	$v1, 8($sp)\n\t"); // restore v1
   asm volatile ("lw	$v0, 4($sp)\n\t"); // restore v2
-  asm volatile ("lw	$k1, 16($sp)\n\t"); // restore Status from the stack
+  asm volatile ("li	$k1, 0x100003\n\t"); // The status we need to write back to say we've finished the interrupt
   asm volatile ("addiu	$sp, $sp,24\n\t"); // pop out of the stack
   asm volatile ("mtc0	$k1, $12\n\t"); // restore Status
   asm volatile ("eret\n\t"); // return
