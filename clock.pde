@@ -20,19 +20,14 @@ void __attribute__((naked, nomips16)) Foo(void){
   asm volatile (".set noreorder\n\t");
   asm volatile ("foo:\n\t");
   // interrupt prelude code:
-  asm volatile ("rdpgpr	$sp, $sp\n\t"); // read stack pointer from previous shadow set
-  asm volatile ("mfc0	$k0, $14\n\t"); // read in the EPC register
   asm volatile ("mfc0	$k1, $12\n\t"); // read in the Status register
   asm volatile ("addiu	$sp, $sp,-24\n\t"); // push in the stack (enough for six register's worth)
-  asm volatile ("sw	$k0, 20($sp)\n\t"); // save EPC to the stack
   asm volatile ("sw	$k1, 16($sp)\n\t"); // save Status to the stack
   asm volatile ("ins	$k1, $zero, 0x1, 0xf\n\t"); // write zeros to bits 1-16 of our copy of Status
   asm volatile ("ori	$k1, $k1, 0x1000\n\t"); // write a 1 to the 17th bit of our copy of Status
-  asm volatile ("mtc0	$k1, $12\n\t"); // set out modified Status as the system Status
-  asm volatile ("sw	$s8, 12($sp)\n\t"); // save $s8, to the stack
+  asm volatile ("mtc0	$k1, $12\n\t"); // set our modified Status as the system Status
   asm volatile ("sw	$v1, 8($sp)\n\t"); // save $v1 (function return registers..?) to the stack
   asm volatile ("sw	$v0, 4($sp)\n\t"); // save $v2 to the stack
-  asm volatile ("move	$s8, $sp\n\t"); // copy the stack pointer to $s8 (frame pointer register)
 
   
   // clear the bit saying we've handled the interrupt:
@@ -46,17 +41,14 @@ void __attribute__((naked, nomips16)) Foo(void){
   asm volatile ("ori $v0, $zero, 0xffff\n\t");
   asm volatile ("sw $v0, 0($v1)\n\t");  // toggle the led
   
-  asm volatile ("move	$sp, $s8\n\t"); // restore the stack pointer
-  asm volatile ("lw	$s8, 12($sp)\n\t"); // restore s8 (previous stack pointer)
+  // save the modified status so we can read it elsewhere:
+  asm volatile ("la $v0, status_\n\t");
+  asm volatile ("sw $k1, 0($v0)");
+  
   asm volatile ("lw	$v1, 8($sp)\n\t"); // restore v1
   asm volatile ("lw	$v0, 4($sp)\n\t"); // restore v2
-  asm volatile ("di\n\t"); // disable interrupts
-  asm volatile ("ehb\n\t"); // execution hazard...?
-  asm volatile ("lw	$k0, 20($sp)\n\t"); // restore k0 from the stack
-  asm volatile ("lw	$k1, 16($sp)\n\t"); // restore k1 from the stack
-  asm volatile ("mtc0	$k0, $14\n\t"); // restore EPC
+  asm volatile ("lw	$k1, 16($sp)\n\t"); // restore Status from the stack
   asm volatile ("addiu	$sp, $sp,24\n\t"); // pop out of the stack
-  asm volatile ("wrpgpr	$sp, $sp\n\t"); // write the stack pointer back to previous shadow register set
   asm volatile ("mtc0	$k1, $12\n\t"); // restore Status
   asm volatile ("eret\n\t"); // return
 
@@ -173,60 +165,67 @@ void setup(){
     pinMode(i, OUTPUT);
     digitalWrite(i,LOW);
   }
-  //pinMode(3, INPUT);
-  //digitalWrite(3,LOW);
+  // disable all interrupts:
+  IPC0 = 0;
+  IPC6 = 0;
+  // except ours:
   attachInterrupt(0,0,RISING);
 }
 
-void loop(){
-  Serial.println("in mainloop!");
-  String readstring = readline();
-  if (readstring == "hello"){
-    Serial.println("hello");
-  }
-  else if (readstring == "hwstart"){
-    autostart = 0;
-    start();
-  }
-  else if ((readstring == "start") || (readstring == "")){
-    autostart = 1;
-    start();
-  }
-  else if (readstring.startsWith("set ")){
-    int firstspace = readstring.indexOf(' ');;
-    int secondspace = readstring.indexOf(' ', firstspace+1);
-    int thirdspace = readstring.indexOf(' ', secondspace+1);
-    if (secondspace == -1 || thirdspace == -1){
-      Serial.println("invalid request");
-      return;
-    }
-    unsigned int addr = readstring.substring(firstspace+1, secondspace).toInt();
-    unsigned int delay_time = readstring.substring(secondspace+1, thirdspace).toInt();
-    unsigned int reps = readstring.substring(thirdspace+1).toInt();
-    if (addr >= max_instructions){
-      Serial.println("invalid address");
-    }
-    else if (delay_time < 4){
-      Serial.println("period too short");
-    }
-    else{
-      instructions[2*addr] = delay_time - 1;
-      instructions[2*addr+1] = delay_time*reps - 4;
-      Serial.println("ok");
-    }
-  }
-  else if (readstring == "go high"){
-    digitalWrite(5,HIGH);
-    Serial.println("ok");
-  }
-  else if (readstring == "go low"){
-    digitalWrite(5,LOW);
-    Serial.println("ok");
-  }
+volatile int status_;
   
-  else{
-    Serial.println("invalid request");
-  }
+void loop(){
+  String readstring = readline();
+  Serial.println(status_, HEX);
 }
+//  Serial.println("in mainloop!");
+//  String readstring = readline();
+//  if (readstring == "hello"){
+//    Serial.println("hello");
+//  }
+//  else if (readstring == "hwstart"){
+//    autostart = 0;
+//    start();
+//  }
+//  else if ((readstring == "start") || (readstring == "")){
+//    autostart = 1;
+//    start();
+//  }
+//  else if (readstring.startsWith("set ")){
+//    int firstspace = readstring.indexOf(' ');;
+//    int secondspace = readstring.indexOf(' ', firstspace+1);
+//    int thirdspace = readstring.indexOf(' ', secondspace+1);
+//    if (secondspace == -1 || thirdspace == -1){
+//      Serial.println("invalid request");
+//      return;
+//    }
+//    unsigned int addr = readstring.substring(firstspace+1, secondspace).toInt();
+//    unsigned int delay_time = readstring.substring(secondspace+1, thirdspace).toInt();
+//    unsigned int reps = readstring.substring(thirdspace+1).toInt();
+//    if (addr >= max_instructions){
+//      Serial.println("invalid address");
+//    }
+//    else if (delay_time < 4){
+//      Serial.println("period too short");
+//    }
+//    else{
+//      instructions[2*addr] = delay_time - 1;
+//      instructions[2*addr+1] = delay_time*reps - 4;
+//      Serial.println("ok");
+//    }
+//  }
+//  else if (readstring == "go high"){
+//    digitalWrite(5,HIGH);
+//    Serial.println("ok");
+//  }
+//  else if (readstring == "go low"){
+//    digitalWrite(5,LOW);
+//    Serial.println("ok");
+//  }
+//  
+//  else{
+//    Serial.println("invalid request");
+//  }
+//}
 
 
