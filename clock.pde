@@ -23,8 +23,8 @@ void __attribute__((naked, nomips16)) Foo(void){
   asm volatile ("mfc0	$k1, $12\n\t"); // read in the Status register
   asm volatile ("addiu	$sp, $sp,-24\n\t"); // push in the stack (enough for six register's worth)
   asm volatile ("sw	$k1, 16($sp)\n\t"); // save Status to the stack
-  asm volatile ("ins	$k1, $zero, 0x1, 0xf\n\t"); // write zeros to bits 1-16 of our copy of Status
-  asm volatile ("ori	$k1, $k1, 0x1000\n\t"); // write a 1 to the 17th bit of our copy of Status
+
+  asm volatile ("li     $k1, 0x101001\n\t"); // the modified status we need to write to acknowledge that we're servicing the interrupt
   asm volatile ("mtc0	$k1, $12\n\t"); // set our modified Status as the system Status
   asm volatile ("sw	$v1, 8($sp)\n\t"); // save $v1 (function return registers..?) to the stack
   asm volatile ("sw	$v0, 4($sp)\n\t"); // save $v2 to the stack
@@ -166,8 +166,8 @@ void setup(){
     digitalWrite(i,LOW);
   }
   // disable all interrupts:
-  IPC0 = 0;
-  IPC6 = 0;
+  //IPC0 = 0;
+  //IPC6 = 0;
   // except ours:
   attachInterrupt(0,0,RISING);
 }
