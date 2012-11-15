@@ -22,8 +22,6 @@ void __attribute__((naked, nomips16)) Foo(void){
   // interrupt prelude code:
   asm volatile ("addiu	$sp, $sp,-24\n\t"); // push in the stack (enough for six register's worth)
 
- 
-  asm volatile ("li     $k1, 0x101001\n\t"); // the modified status we need to write to acknowledge that we're servicing the interrupt
   asm volatile ("mtc0	$k1, $12\n\t"); // set our modified Status as the system Status
   asm volatile ("sw	$v1, 8($sp)\n\t"); // save $v1 (function return registers..?) to the stack
   asm volatile ("sw	$v0, 4($sp)\n\t"); // save $v2 to the stack
@@ -175,7 +173,8 @@ void setup(){
 volatile int status_;
   
 void loop(){
-   asm volatile ("wait\n\t")
+   asm volatile ("li     $k1, 0x101001\n\t"); // the modified status we need to write to acknowledge that we're servicing the interrupt
+   asm volatile ("wait\n\t");
 }
 //  Serial.println("in mainloop!");
 //  String readstring = readline();
