@@ -66,7 +66,9 @@ void start(){
   asm volatile ("li $v1, 0x10088880\n\t"); // the value of IFSO we need to indicate we've serviced the interrupt
   // wait for it...
   asm volatile ("wait\n\t");
-    
+  asm volatile ("j end\n\t");
+  asm volatile ("nop\n\t");
+  
   // update the period of the output:
   asm volatile ("top: sw $t3, 0($t0)\n\t"); 
   asm volatile ("sw $t3, 0($t1)\n\t");
@@ -82,7 +84,9 @@ void start(){
   //load the the next delay time in:
   asm volatile ("lw $t4, 4($t2)\n\t"); 
   // turn everything off:
-  OC2CON = 0; 
+  OC2CON = 0;
+  
+  asm volatile ("end:\n\t");
   // Restore other interrupts to their previous state:
   IPC0 = temp_IPC0;
   IPC6 = temp_IPC6;
