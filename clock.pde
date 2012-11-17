@@ -146,6 +146,9 @@ void start(){
   
   // no longer reset on serial communication:
   reset_on_serial = 0;
+  
+  // say that we're done!
+  Serial.println("done");
 }
 
 
