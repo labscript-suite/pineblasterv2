@@ -8,12 +8,14 @@
 
 const unsigned int max_instructions = 200;
 int autostart;
+int reset_on_serial = 0;
 unsigned int instructions[max_instructions];
 
 void __attribute__((naked, at_vector(3), nomips16)) ExtInt0Handler(void){
+  // This interrupt is called when a hardware trigger goes high to start the run.
   // set Status to acknowledge that we're starting the interrupt handler:
   asm volatile ("mtc0 $k0, $12\n\t");
-  // set IPC0 so at to disable this interrupt from occuring again:
+  // set IPC0 so as to disable this interrupt from occuring again:
   asm volatile ("sw $zero, 0($t6)\n\t");
   // Write to IFSO to indicate that the interrupt has been handled:
   asm volatile ("sw $v1, 0($v0)\n\t");
@@ -21,6 +23,42 @@ void __attribute__((naked, at_vector(3), nomips16)) ExtInt0Handler(void){
   asm volatile ("mtc0 $k1, $12\n\t");
   // return:
   asm volatile ("eret\n\t");
+}
+
+void __attribute__((naked, at_vector(24), nomips16)) IntSer0Handler(void){
+  // This interrupt is called whenever serial communication arrives. We
+  // intercept it and decide whether to treat it as ordinary serial communication,
+  // or as an abort signal (for when the sequence is running). In the case of an abort signal,
+  // we can reset the CPU.
+  // Load in the address of reset_on_serial:
+  asm volatile ("la $k0, reset_on_serial\n\t");
+  // load in the value of reset_on_serial:
+  asm volatile ("lw $k0, 0($k0)\n\t");
+  // if it's zero, do the usual serial handler:
+  asm volatile ("beq $k0, $zero, IntSer0Handler\n\t");
+  // Otherwise, do a reset! (jump to the below function)
+  asm volatile ("j reset\n\t");
+}
+
+void __attribute__((naked, nomips16)) Reset(void){
+  // does a software reset of the CPU:
+  // We have to do some kind of 'unlocking' sequence before we're allowed to reset:
+  asm volatile ("reset: di\n\t");
+  asm volatile ("la $k0, SYSKEY\n\t");
+  asm volatile ("li $v0, 0xAA996655\n\t");
+  asm volatile ("li $v1, 0x556699AA\n\t");
+  // Have to write these two keys to SYSKEY in two back to back instructions to 'unlock' the system:
+  asm volatile ("sw $v0, 0($k0)\n\t");
+  asm volatile ("sw $v1, 0($k0)\n\t");
+  // ok, now we can reset.
+  asm volatile ("la $k0, RSWRST\n\t");
+  // 'arm' the reset by writing a 1 to this register:
+  asm volatile ("li $v0, 1\n\t");
+  asm volatile ("sw $v0, 0($k0)\n\t");
+  // execute the reset by reading the register back in (this is a funny bunch of hoops we're having to jump through):
+  asm volatile ("lw $v0, 0($k0)");
+  // Aight, now we wait for the end to come:
+  asm volatile ("seeya: j seeya");
 }
 
 void start(){
@@ -48,6 +86,9 @@ void start(){
   asm volatile ("nop\n\t");
   T2CONSET = 0x8000; 
   OC2CONSET = 0x8000; 
+  
+  // Any serial communication will now reset the CPU:
+  reset_on_serial = 1;
   
   // don't fill our branch delay slots with nops, thank you very much:
   asm volatile (".set noreorder\n\t":::"t0","t1","t2","t3","t4", "t5", "t6", "t7", "t8", "k0", "k1", "v0", "v1");
@@ -98,9 +139,13 @@ void start(){
   
   // turn everything off:
   OC2CON = 0;
+  
   // Restore other interrupts to their previous state:
   IPC0 = temp_IPC0;
   IPC6 = temp_IPC6;
+  
+  // no longer reset on serial communication:
+  reset_on_serial = 0;
 }
 
 
@@ -146,8 +191,6 @@ void setup(){
     pinMode(i, OUTPUT);
     digitalWrite(i,LOW);
   }
-  //pinMode(3, INPUT);
-  //digitalWrite(3,LOW);
 }
 
 void loop(){
@@ -193,6 +236,10 @@ void loop(){
   else if (readstring == "go low"){
     digitalWrite(5,LOW);
     Serial.println("ok");
+  }
+  else if (readstring == "reset"){
+    Serial.println("ok");
+    asm volatile ("j reset\n\t");
   }
   
   else{
