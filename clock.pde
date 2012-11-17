@@ -59,7 +59,12 @@ void start(){
   asm volatile ("bne $t5, $zero, top\n\t");
   asm volatile ("nop\n\t");
   
-  // otherwise wait for it...
+  // otherwise, prepare for a hardware triggered interrupt:
+  asm volatile ("li $k0, 0x101001\n\t"); // the status we need to write to acknowledge that we're servicing the interrupt
+  asm volatile ("li $k1, 0x100003\n\t"); // The status we need to write to say we've finished the interrupt
+  asm volatile ("la $v0, IFS0\n\t"); // load the address of IFS0
+  asm volatile ("li $v1, 0x10088880\n\t"); // the value of IFSO we need to indicate we've serviced the interrupt
+  // wait for it...
   asm volatile ("wait\n\t");
     
   // update the period of the output:
