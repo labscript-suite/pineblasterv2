@@ -70,7 +70,7 @@ void __attribute__((noinline)) run(){
 }
 
 void __attribute__((naked, at_vector(3), nomips16)) ExtInt0Handler(void){
-  // This function gets called when a hardware trigger is received
+  // This function gets called when a hardware trigger is received:
   asm volatile (".set noreorder\n\t");
   asm volatile ("j interpreter\n\t");
   asm volatile ("mtc0	$k0, $12\n\t"); // Status to indicate we've started servicing the interrupt:
@@ -157,6 +157,7 @@ void start(){
   IPC6 = temp_IPC6;
 }
 
+
 String readline(){
   String readstring = "";
   char c;
@@ -197,15 +198,8 @@ void setup(){
     pinMode(i, OUTPUT);
     digitalWrite(i,LOW);
   }
-  // disable all interrupts:
-  IPC0 = 0;
-  IPC6 = 0;
-  // except ours:
-  attachInterrupt(0,0,RISING);
 }
 
-volatile int status_;
-  
 void loop(){
 
   Serial.println("in mainloop!");
