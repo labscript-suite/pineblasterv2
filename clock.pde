@@ -10,9 +10,17 @@ const unsigned int max_instructions = 200;
 int autostart;
 unsigned int instructions[max_instructions];
 
-void __attribute__((naked, at_vector(3))) MyInt0Handler(void){
-  asm volatile ("j top\n\t");
-  asm volatile ("nop\n\t");
+void __attribute__((naked, at_vector(3), nomips16)) ExtInt0Handler(void){
+  // set Status to acknowledge that we're starting the interrupt handler:
+  asm volatile ("mtc0 $k0, $12\n\t");
+  // set IPC0 so at to disable this interrupt from occuring again:
+  asm volatile ("sw $zero, 0($t6)\n\t");
+  // Write to IFSO to indicate that the interrupt has been handled:
+  asm volatile ("sw $v1, 0($v0)\n\t");
+  // set Status to indicate the end of the interrupt handler:
+  asm volatile ("mtc0 $k1, $12\n\t");
+  // return:
+  asm volatile ("eret\n\t");
 }
 
 void start(){
@@ -54,6 +62,10 @@ void start(){
   // load the the autostart flag into register $t5:
   asm volatile ("la $t5, autostart\n\t");
   asm volatile ("lw $t5, 0($t5)\n\t");
+  // load the address of IPC0 into register $t6:
+  asm volatile ("la $t6, IPC0\n\t");
+  // load the address of OC2CON into register $t7:
+  asm volatile ("la $t7, OC2CON\n\t");
   
   // if we're set to autostart, jump right in:
   asm volatile ("bne $t5, $zero, top\n\t");
@@ -66,8 +78,6 @@ void start(){
   asm volatile ("li $v1, 0x10088880\n\t"); // the value of IFSO we need to indicate we've serviced the interrupt
   // wait for it...
   asm volatile ("wait\n\t");
-  asm volatile ("j end\n\t");
-  asm volatile ("nop\n\t");
   
   // update the period of the output:
   asm volatile ("top: sw $t3, 0($t0)\n\t"); 
@@ -83,10 +93,9 @@ void start(){
   asm volatile ("bne $t3, $zero, top\n\t");
   //load the the next delay time in:
   asm volatile ("lw $t4, 4($t2)\n\t"); 
+  
   // turn everything off:
   OC2CON = 0;
-  
-  asm volatile ("end:\n\t");
   // Restore other interrupts to their previous state:
   IPC0 = temp_IPC0;
   IPC6 = temp_IPC6;
