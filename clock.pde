@@ -32,8 +32,10 @@ void start(){
   IPC0 = 0;
   IPC6 = 0;
   
-  // except for our one:
-  attachInterrupt(0,0,RISING);
+  // except for our one if we're hardware starting:
+  if (autostart==0){
+    attachInterrupt(0,0,RISING);
+  }
 
   // 32 bit mode, no prescaler:
   T2CON = 0x0008;
