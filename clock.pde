@@ -40,7 +40,7 @@ void start(){
   OC2CONSET = 0x8000; 
   
   // don't fill our branch delay slots with nops, thank you very much:
-  asm volatile (".set noreorder\n\t":::"t0","t1","t2","t3","t4", "t5");
+  asm volatile (".set noreorder\n\t":::"t0","t1","t2","t3","t4", "t5", "t6", "t7", "t8", "k0", "k1", "v0", "v1");
   // load the ram address of PR2 into register $t0:
   asm volatile ("la $t0, PR2\n\t");
   // load the ram address of OC2R into register $t1:
