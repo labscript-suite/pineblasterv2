@@ -8,7 +8,7 @@
 
 const unsigned int max_instructions = 200;
 int autostart;
-int reset_on_serial = 0;
+volatile int reset_on_serial = 0;
 unsigned int instructions[max_instructions];
 
 void __attribute__((naked, at_vector(3), nomips16)) ExtInt0Handler(void){
@@ -64,13 +64,8 @@ void __attribute__((naked, nomips16)) Reset(void){
 void start(){
   // set the values required by the first iteration of the loop in run():
   Serial.println("ok");
-  // temporarily disable all interrupts:
-  int temp_IPC0 = IPC0;
-  int temp_IPC6 = IPC6;
-  IPC0 = 0;
-  IPC6 = 0;
   
-  // except for our one if we're hardware starting:
+  // Enable our hardware trigger, if we're doing a hardware triggered start:
   if (autostart==0){
     attachInterrupt(0,0,RISING);
   }
@@ -139,11 +134,7 @@ void start(){
   
   // turn everything off:
   OC2CON = 0;
-  
-  // Restore other interrupts to their previous state:
-  IPC0 = temp_IPC0;
-  IPC6 = temp_IPC6;
-  
+   
   // no longer reset on serial communication:
   reset_on_serial = 0;
   
@@ -194,6 +185,8 @@ void setup(){
     pinMode(i, OUTPUT);
     digitalWrite(i,LOW);
   }
+  // Disable our hardware trigger until it is needed:
+  IPC0 = 0;
 }
 
 void loop(){
