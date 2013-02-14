@@ -66,9 +66,17 @@ void start(){
   Serial.println("ok");
   // Any serial communication will now reset the CPU:
   reset_on_serial = 1;
+  int incomplete = 1;
+  while (incomplete==1){
+    run();
+    autostart = 0;
+    //Serial.println((uint)resume_address, HEX);
+    //Serial.println((uint)instructions, HEX);
+    incomplete = (uint)resume_address != (uint)instructions;
+    //Serial.println(incomplete, HEX);
+  }
   // no longer reset on serial communication:
   reset_on_serial = 0;
-  run()
   // say that we're done!
   Serial.println("done");
 }
