@@ -211,17 +211,14 @@ void loop(){
       return;
     }
     unsigned int addr = readstring.substring(firstspace+1, secondspace).toInt();
-    unsigned int delay_time = readstring.substring(secondspace+1, thirdspace).toInt();
+    unsigned int half_period = readstring.substring(secondspace+1, thirdspace).toInt();
     unsigned int reps = readstring.substring(thirdspace+1).toInt();
     if (addr >= max_instructions){
       Serial.println("invalid address");
     }
-    else if (delay_time < 4){
-      Serial.println("period too short");
-    }
     else{
-      instructions[2*addr] = delay_time - 1;
-      instructions[2*addr+1] = delay_time*reps - 4;
+      instructions[2*addr] = half_period - 1;
+      instructions[2*addr+1] = half_period*reps - 4;
       Serial.println("ok");
     }
   }
