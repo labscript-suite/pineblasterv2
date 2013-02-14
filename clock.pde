@@ -119,7 +119,9 @@ void run(){
   asm volatile ("la $t6, IPC0\n\t");
   // load the address of OC2CON into register $t7:
   asm volatile ("la $t7, OC2CON\n\t");
-    
+  // a small constant used for getting to the right part of the waveform:
+  asm volatile ("addi $t8, $zero, 2\n\t");
+  
   // Prepare registers for hardware triggering (makes the interrupt code faster):
   asm volatile ("li $k0, 0x101001\n\t"); // the status we need to write to acknowledge that we're servicing the interrupt
   asm volatile ("li $k1, 0x100003\n\t"); // The status we need to write to say we've finished the interrupt
@@ -127,12 +129,19 @@ void run(){
   asm volatile ("li $v1, 0x10088880\n\t"); // the value of IFSO we need to indicate we've serviced the interrupt
   
   // if we're set to autostart, jump right in:
-  asm volatile ("bne $t5, $zero, top\n\t");
+  asm volatile ("bne $t5, $zero, start\n\t");
   asm volatile ("nop\n\t");
   
   // otherwise, wait for it...
   asm volatile ("wait\n\t");
-  
+   
+  // We need to get up to the right part of the waveform, we don't want the initial digital low.
+  // We want to start with a digital high. So let's set the period to some small constant, and wait
+  // until it is about to go high, switching the period to our first instruction at just the right moment:
+  asm volatile ("start: sw $t8, 0($t0)\n\t"); 
+  asm volatile ("sw $t8, 0($t1)\n\t");
+  asm volatile ("nop\n\t");
+
   // update the period of the output:
   asm volatile ("top: sw $t3, 0($t0)\n\t"); 
   asm volatile ("sw $t3, 0($t1)\n\t");
