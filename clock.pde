@@ -6,11 +6,13 @@
 //byte ip[] = { 192,168,1, 177 };
 //Server server(8000);
 
-const unsigned int max_instructions = 200;
+const unsigned int max_instructions = 15000;
 int autostart;
 volatile int reset_on_serial = 0;
-unsigned int instructions[max_instructions];
+unsigned int instructions[2*max_instructions + 2];
 volatile unsigned int * resume_address = instructions;
+
+char readstring[256] = "";
 
 void __attribute__((naked, at_vector(3), nomips16)) ExtInt0Handler(void){
   // This interrupt is called when a hardware trigger goes high to start the run.
@@ -70,10 +72,7 @@ void start(){
   while (incomplete==1){
     run();
     autostart = 0;
-    //Serial.println((uint)resume_address, HEX);
-    //Serial.println((uint)instructions, HEX);
     incomplete = (uint)resume_address != (uint)instructions;
-    //Serial.println(incomplete, HEX);
   }
   // no longer reset on serial communication:
   reset_on_serial = 0;
@@ -176,8 +175,8 @@ void run(){
 
 
 
-String readline(){
-  String readstring = "";
+void readline(){
+  byte i = 0;
   char c;
   byte crfound = 0;
   while (true){
@@ -188,19 +187,24 @@ String readline(){
       }
       else if (c == '\n'){
         if (crfound == 1){
-          return readstring;
+          readstring[i] = '\0';
+          return;
         }
         else{
-          readstring += '\n';
+          readstring[i] = '\n';
+          i++;
         }
       }
       else if (crfound){
         crfound = 0;
-        readstring += '\r';
-        readstring += c;
+        readstring[i] = '\r';
+        i++;
+        readstring[i] = c;
+        i++;
       }
       else{
-        readstring += c;
+        readstring[i] = c;
+        i++;
       }
     }
   }
@@ -221,33 +225,27 @@ void setup(){
 }
 
 void loop(){
-  String readstring = readline();
-  if (readstring == "hello"){
+  readline();
+  if (strcmp(readstring, "hello") == 0){
     Serial.println("hello");
   }
-  else if (readstring == "add"){
-      Serial.println((uint)resume_address, HEX);
-  }
-  else if (readstring == "hwstart"){
+  else if (strcmp(readstring, "hwstart") == 0){
     autostart = 0;
     start();
   }
-  else if ((readstring == "start") || (readstring == "")){
+  else if ((strcmp(readstring, "start") == 0) || (strcmp(readstring, "") == 0)){
     autostart = 1;
     start();
   }
-  else if (readstring.startsWith("set ")){
-    int firstspace = readstring.indexOf(' ');;
-    int secondspace = readstring.indexOf(' ', firstspace+1);
-    int thirdspace = readstring.indexOf(' ', secondspace+1);
-    if (secondspace == -1 || thirdspace == -1){
-      Serial.println("invalid request");
-      return;
+  else if (strncmp(readstring, "set ", 4) == 0){
+    unsigned int addr;
+    unsigned int half_period;
+    unsigned int reps;
+    int parsed = sscanf(readstring,"%*s %u %u %u",&addr, &half_period, &reps);
+    if (parsed < 3){
+        Serial.println("invalid request");
     }
-    unsigned int addr = readstring.substring(firstspace+1, secondspace).toInt();
-    unsigned int half_period = readstring.substring(secondspace+1, thirdspace).toInt();
-    unsigned int reps = readstring.substring(thirdspace+1).toInt();
-    if (addr >= max_instructions){
+    else if (addr >= max_instructions){
       Serial.println("invalid address");
     }
     else if (half_period == 0){
@@ -277,15 +275,15 @@ void loop(){
       Serial.println("ok");
     }
   }
-  else if (readstring == "go high"){
+  else if (strcmp(readstring, "go high") == 0){
     digitalWrite(5,HIGH);
     Serial.println("ok");
   }
-  else if (readstring == "go low"){
+  else if (strcmp(readstring, "go low") == 0){
     digitalWrite(5,LOW);
     Serial.println("ok");
   }
-  else if (readstring == "reset"){
+  else if (strcmp(readstring, "reset") == 0){
     Serial.println("ok");
     asm volatile ("j reset\n\t");
   }
