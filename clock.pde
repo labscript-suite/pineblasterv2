@@ -10,6 +10,7 @@ const unsigned int max_instructions = 200;
 int autostart;
 volatile int reset_on_serial = 0;
 unsigned int instructions[max_instructions];
+volatile unsigned int * resume_address = instructions;
 
 void __attribute__((naked, at_vector(3), nomips16)) ExtInt0Handler(void){
   // This interrupt is called when a hardware trigger goes high to start the run.
@@ -62,9 +63,17 @@ void __attribute__((naked, nomips16)) Reset(void){
 }
 
 void start(){
-  // set the values required by the first iteration of the loop in run():
   Serial.println("ok");
-  
+  // Any serial communication will now reset the CPU:
+  reset_on_serial = 1;
+  // no longer reset on serial communication:
+  reset_on_serial = 0;
+  run()
+  // say that we're done!
+  Serial.println("done");
+}
+
+void run(){
   // Enable our hardware trigger, if we're doing a hardware triggered start:
   if (autostart==0){
     attachInterrupt(0,0,RISING);
@@ -82,9 +91,6 @@ void start(){
   T2CONSET = 0x8000; 
   OC2CONSET = 0x8000; 
   
-  // Any serial communication will now reset the CPU:
-  reset_on_serial = 1;
-  
   // don't fill our branch delay slots with nops, thank you very much:
   asm volatile (".set noreorder\n\t":::"t0","t1","t2","t3","t4", "t5", "t6", "t7", "t8", "k0", "k1", "v0", "v1");
   // load the ram address of PR2 into register $t0:
@@ -92,7 +98,8 @@ void start(){
   // load the ram address of OC2R into register $t1:
   asm volatile ("la $t1, OC2R\n\t");
   // load the address of the instruction array into register $t2:
-  asm volatile ("la $t2, instructions\n\t");
+  asm volatile ("la $t2, resume_address\n\t");
+  asm volatile ("lw $t2, 0($t2)\n\t");
   // load the half-period time into register $t3:
   asm volatile ("lw $t3, 0($t2)\n\t"); 
   // load the delay time into register $t4:
@@ -116,7 +123,7 @@ void start(){
   asm volatile ("nop\n\t");
   
   // otherwise, wait for it...
-  asm volatile ("wait: wait\n\t");
+  asm volatile ("wait\n\t");
   
   // update the period of the output:
   asm volatile ("top: sw $t3, 0($t0)\n\t"); 
@@ -134,26 +141,19 @@ void start(){
   asm volatile ("lw $t4, 4($t2)\n\t"); 
   
   // We got a stop instruction (indicated by half_period==0). Disable output:
-  asm volatile ("sw $zero, 0($t0)\n\t"); 
-  asm volatile ("sw $zero, 0($t1)\n\t");
+  asm volatile ("sw $zero, 0($t7)\n\t");
   
   // We might be stopping for good, or we might be resuming after a hardware trigger.
-  // In case of the latter, load the next half-period in:
-  asm volatile ("lw $t3, 8($t2)\n\t");
+  // In case of the latter (indicated by delay_time != 0), 
+  // save the next instruction pointer so we can resume from it:
+  asm volatile ("la $t8, resume_address");
+  asm volatile ("la $t7, instructions");
+  asm volatile ("beq $t4, $zero, end\n\t");
+  asm volatile ("sw $t7, 0($t8)\n\t");
   // increment our instruction pointer:
   asm volatile ("addi $t2, 8\n\t");
-  // jump to the wait instruction if we are to resume (indicated by delay_time!=0):
-  asm volatile ("bne $t4, $zero, top\n\t");
-  // load the the next delay time in:
-  asm volatile ("lw $t4, 4($t2)\n\t");
-
-  // otherwise, the program execution is complete.
-  
-  // no longer reset on serial communication:
-  reset_on_serial = 0;
-  
-  // say that we're done!
-  Serial.println("done");
+  asm volatile ("sw $t2, 0($t8)\n\t");
+  asm volatile ("end:\n\t");
 }
 
 
@@ -208,6 +208,9 @@ void loop(){
   if (readstring == "hello"){
     Serial.println("hello");
   }
+  else if (readstring == "add"){
+      Serial.println((uint)resume_address, HEX);
+  }
   else if (readstring == "hwstart"){
     autostart = 0;
     start();
@@ -229,6 +232,27 @@ void loop(){
     unsigned int reps = readstring.substring(thirdspace+1).toInt();
     if (addr >= max_instructions){
       Serial.println("invalid address");
+    }
+    else if (half_period == 0){
+      // This indicates either a stop or a wait instruction
+      instructions[2*addr] = 0;
+      if (reps == 0){
+        // It's a stop instruction
+        instructions[2*addr+1] = 0;
+      }
+      else if (reps == 1){
+        // It's a wait instruction:
+        instructions[2*addr+1] = 1;
+      }
+      else{
+        Serial.println("invalid request");
+      }
+    }
+    else if (half_period < 4){
+      Serial.println("half-period too short");
+    }
+    else if (reps < 1){
+      Serial.println("reps must be at least one");
     }
     else{
       instructions[2*addr] = half_period - 1;
