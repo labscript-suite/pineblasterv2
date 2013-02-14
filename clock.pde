@@ -115,7 +115,7 @@ void start(){
   asm volatile ("la $v0, IFS0\n\t"); // load the address of IFS0
   asm volatile ("li $v1, 0x10088880\n\t"); // the value of IFSO we need to indicate we've serviced the interrupt
   // wait for it...
-  asm volatile ("wait\n\t");
+  asm volatile ("wait: wait\n\t");
   
   // update the period of the output:
   asm volatile ("top: sw $t3, 0($t0)\n\t"); 
@@ -132,9 +132,22 @@ void start(){
   //load the the next delay time in:
   asm volatile ("lw $t4, 4($t2)\n\t"); 
   
-  // turn everything off:
-  OC2CON = 0;
-   
+  // We got a stop instruction (indicated by half_period==0). Disable output:
+  asm volatile ("sw $zero, 0($t0)\n\t"); 
+  asm volatile ("sw $zero, 0($t1)\n\t");
+  
+  // We might be stopping for good, or we might be resuming after a hardware trigger.
+  // In case of the latter, load the next half-period in:
+  asm volatile ("lw $t3, 8($t2)\n\t");
+  // increment our instruction pointer:
+  asm volatile ("addi $t2, 8\n\t");
+  // jump to the wait instruction if we are to resume (indicated by delay_time!=0):
+  asm volatile ("bne $t4, $zero, top\n\t");
+  // load the the next delay time in:
+  asm volatile ("lw $t4, 4($t2)\n\t");
+
+  // otherwise, the program execution is complete.
+  
   // no longer reset on serial communication:
   reset_on_serial = 0;
   
