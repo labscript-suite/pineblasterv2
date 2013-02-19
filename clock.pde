@@ -254,10 +254,12 @@ void loop(){
       if (reps == 0){
         // It's a stop instruction
         instructions[2*addr+1] = 0;
+        Serial.println("ok");
       }
       else if (reps == 1){
         // It's a wait instruction:
         instructions[2*addr+1] = 1;
+        Serial.println("ok");
       }
       else{
         Serial.println("invalid request");
