@@ -1,18 +1,36 @@
-Use MPIDE (available on the ChipKIT github) to compile and uppload the code to the ChipKIT MAX32.
+The PineBlaster is a microcontroller-based pseudoclock, built on the Digilent
+chipKIT Max32™ Prototyping Platform. It provides for programmable pulse
+sequences. It supports up to 15000 instructions, pulse periods between 50ns
+and 56 seconds, and up to 2 billion repetitions of a pulse in one instruction.
+
+The code can be loaded onto a chipkit
+max32 via the arduino-like MPIDE. The device is then programmable over a
+serial connection.
+
+
+SETUP INSTRUCTIONS
+
+Use MPIDE (available on the ChipKIT github) to compile and upload the code to
+the ChipKIT MAX32.
 
 Tested on MPIDE 0022 - 2011.12.14.
 
-One modification is required: compiler optimisations must be disabled. This is required so that the compiler
-doesn't produce unpredictable code, or multiple code paths for the same bit of source code. So we do this to
-ensure our code is deterministic.
+One modification is required: compiler optimisations must be disabled. This is
+required so that the compiler doesn't produce unpredictable code, or multiple
+code paths for the same bit of source code. So we do this to ensure our code
+is deterministic.
 
-To disable compiler optimisations, edit <MPIDE_folder>/hardware/pic32/platforms.txt and replace all instances of '-O3' with '-O0'.
+To disable compiler optimisations, edit
+<MPIDE_folder>/hardware/pic32/platforms.txt and replace all instances of '-O3'
+with '-O0'.
+
 
 USAGE INSTRUCTIONS
 
-The Pineblaster talks serial over USB, at 115200bps. Newlines should be a carriage return and line feed ( CRLF, '\r\n').
+The Pineblaster talks serial over USB, at 115200bps. Newlines should be a
+carriage return and line feed ( CRLF, '\r\n').
 
-Pin 5 is the output, pin 3 is the hardware trigger. Both are 3.3v TTL 
+Pin 5 is the output, pin 3 is the hardware trigger. Both are 3.3v TTL
 
 Commands that can be sent over serial are:
 
