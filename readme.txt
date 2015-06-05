@@ -10,8 +10,8 @@ serial connection.
 
 SETUP INSTRUCTIONS
 
-Use MPIDE (available on the ChipKIT github) to compile and upload the code to
-the ChipKIT MAX32.
+Use MPIDE (available on the ChipKIT github) to compile and upload the code
+(pineblaster.pde) to the ChipKIT MAX32.
 
 Tested on MPIDE 0022 - 2011.12.14.
 

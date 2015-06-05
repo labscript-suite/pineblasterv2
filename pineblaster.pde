@@ -1,7 +1,7 @@
 /*
 #######################################################################
 #                                                                     #
-# clock.pde                                                           #
+# pineblaster.pde                                                     #
 #                                                                     #
 # Copyright 2013, Christopher Billington                              #
 #                                                                     #
