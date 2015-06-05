@@ -1,3 +1,19 @@
+/*
+#######################################################################
+#                                                                     #
+# clock.pde                                                           #
+#                                                                     #
+# Copyright 2013, Christopher Billington                              #
+#                                                                     #
+# This file is used to flash a Digilent ChipKIT Max32 microcontroller #
+# prototyping board to create a PineBlaster (see readme.txt and       #
+# http://hardware.labscriptsuite.org).                                #
+# This file is licensed under the Simplified BSD License.             #
+# See the license.txt file for the full license.                      #
+#                                                                     #
+#######################################################################
+*/
+
 #include <plib.h>
 //#include <SPI.h>
 //#include <Ethernet.h>
