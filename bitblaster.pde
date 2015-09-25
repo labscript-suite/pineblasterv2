@@ -11,7 +11,7 @@ https://bitbucket.org/labscript_suite/pineblaster
 #include <plib.h>
 
 // what's the RAM-limited number of instructions we can store?
-#define MAX_INSTR 100000
+#define MAX_INSTR 30000
 // a big array
 uint32_t instructions[MAX_INSTR + 1];
 

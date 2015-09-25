@@ -11,7 +11,7 @@ Improved capabilities may be available on newer units, but see compatibility sec
 - 3.3V LVTTL outputs, with 5V-compatible TTL inputs
 - 16 simultaneous digital outputs
 - Minimum pulse time 150ns, then 25ns increments (see timing information below)
-- 128kB RAM, providing capability for 100,000 instructions
+- 128kB RAM, providing capability for 30,000 instructions
 - Software- and hardware-triggering
 - Supports mid-sequence "wait" commands to enable hardware re-triggering
 - Powered by USB or external 5V
