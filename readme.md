@@ -119,6 +119,8 @@ Pin assignment
 See also the [chipKIT Max32 Pinout Table][2] for a list of the pins and their purposes.
 Note that most pins can be configured for multiple purposes, the below table contains the non-trivial pin assignments set by this program.
 
+![Pinout diagram](pinout.gif)
+
 | Connection  | Label   | Port    | Purpose                                     |
 |:-----------:|:-------:|:-------:|---------------------------------------------|
 | J14-02      | 70      | RA0     | "Running" monitor output                    |
