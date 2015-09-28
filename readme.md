@@ -18,14 +18,15 @@ Improved capabilities may be available on newer units, but see compatibility sec
 - USB interface, programmable over serial
 - Python and LabVIEW interfaces provided
 
-The below graph demonstrates 3-channels of output, compared to a 10MHz square wave:
+The below graph demonstrates 4-channels of output, captured with a TekTronix TDS-2024, with dashed lines corresponding to 150ns intervals.
+![Example sequence](example_seq.png)
 
 The sequence was created using the following minimal example code
 ```python
 import bitblaster, numpy
-dev = bitblaster.BitBlaster('COM4')         # open USB comm port
-dev.bitstream(numpy.arange(100)%16,dt=2e-7) # a simple sequence with constant timestep
-dev.start()                                 # software-trigger, immediate start
+dev = bitblaster.BitBlaster('COM4') # open USB comm port
+dev.bitstream(numpy.random.randint(0,8,100)%32,dt=150e-9) # a simple "interesting" sequence
+dev.start() # software-trigger, immediate start
 ```
 
 
