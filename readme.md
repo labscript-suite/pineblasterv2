@@ -16,7 +16,7 @@ Improved capabilities may be available on newer units, but see compatibility sec
 - Supports mid-sequence "wait" commands to enable hardware re-triggering
 - Powered by USB or external 5V
 - USB interface, programmable over serial
-- Python and LabVIEW interfaces provided
+- Python and [LabVIEW][6] interfaces provided (python included, [LabVIEW hosted separately][6])
 
 The below graph demonstrates 4-channels of output, captured with a TekTronix TDS-2024, with dashed lines corresponding to 150ns intervals.
 ![Example sequence](example_seq.png)
@@ -166,3 +166,4 @@ Serial communication is handled by the high-level C++ Arduino library for simpli
 [3]: http://chipkit.s3.amazonaws.com/ "Archive of MPIDE versions"
 [4]: http://ww1.microchip.com/downloads/en/DeviceDoc/PIC32MX_Datasheet_v2_61143B.pdf "PIC32MX Family Data Sheet"
 [5]: https://en.wikipedia.org/wiki/Delay_slot#Branch_delay_slots
+[6]: https://bitbucket.org/martijnj/bitblaster_labview/
