@@ -25,7 +25,8 @@ The sequence was created using the following minimal example code
 ```python
 import bitblaster, numpy
 dev = bitblaster.BitBlaster('COM4') # open USB comm port
-dev.bitstream(numpy.random.randint(0,8,100)%32,dt=150e-9) # a simple "interesting" sequence
+seq = numpy.random.randint(0,8,100)%32 # a simple sequence
+dev.bitstream(seq,dt=150e-9) # program the device
 dev.start() # software-trigger, immediate start
 ```
 
