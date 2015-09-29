@@ -18,7 +18,7 @@ Improved capabilities may be available on newer units, but see compatibility sec
 - USB interface, programmable over serial
 - Python and [LabVIEW][6] interfaces provided (python included, [LabVIEW hosted separately][6])
 
-The below graph demonstrates 4-channels of output, captured with a TekTronix TDS-2024, with dashed lines corresponding to 150ns intervals.
+The below graph demonstrates 4-channels of output, captured with a TekTronix TDS-2024 (voltage probes attenuation x10), with dashed lines corresponding to 150ns intervals.
 ![Example sequence](example_seq.png)
 
 The sequence was created using the following minimal example code
