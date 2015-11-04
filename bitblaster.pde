@@ -221,9 +221,9 @@ void loop( ) {
         Serial.println("invalid request");
     } else if (ts < MIN_PULSE)
       Serial.println("timestep too short");
-    else if (ts >= 65535)
+    else if (ts > 65535)
       Serial.println("timestep too long");
-    else if (val >= 65535)
+    else if (val > 65535)
       Serial.println("invalid value");
     else {
       // it's a regular instruction! HI word is the timesteps, LO word is the port value
