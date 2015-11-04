@@ -10,6 +10,9 @@ https://bitbucket.org/labscript_suite/pineblaster
 */
 #include <plib.h>
 
+// do we want to hold the final instruction or not?
+#define HOLD_FINAL_INSTRUCTION	1
+
 // what's the RAM-limited number of instructions we can store?
 #define MAX_INSTR 30000
 // a big array
@@ -148,7 +151,11 @@ int run(int autostart)
   asm volatile ("j trig_wait\n\t");
   
   // *** all done ***
+#if HOLD_FINAL_INSTRUCTION
+  asm volatile ("end: nop\n\t");
+#else
   asm volatile ("end: sw $zero, 0($t0)\n\t");
+#endif
 }
 
 void readline( ) {
