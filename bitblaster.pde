@@ -72,20 +72,22 @@ void __attribute__((naked, nomips16)) IntReset(void)
   asm volatile ("seeya: j seeya");
 }
 
-void start(int autostart)
+void start(int mode)
 {
-  // if autostart > 0, the run is started immediately
-  // if autostart = 0, the run waits for a hardware trigger
-  // if autostart < 0, the run is repeated on hardware triggers
+  // operation depends on value of "mode":
+  //   0 = hardware triggered, single run
+  //   1 = software triggered, single run
+  //   2 = hardware triggered, repeated infinitely
+  //   3 = software triggered, repeated infinitely
   Serial.println("ok");
   // set serial comms to reset the CPU
   reset_on_serial = 1;
   // do the magic
   do {
     LATASET = 0x1;      // indicate the run has begun
-    run(autostart);
+    run(mode & 1);
     LATACLR = 0x1;      // indicate the run has ended
-  } while (autostart < 0);  // repeat run?
+  } while (mode & 2);   // repeat run?
   // do not reset on serial
   reset_on_serial = 0;
   Serial.println("done");
@@ -201,9 +203,11 @@ void loop( ) {
   else if (strcmp(cmdstr, "hwstart") == 0)
     start(0);
   else if (strcmp(cmdstr, "hwrepeat") == 0)
-    start(-1);
+    start(2);
   else if (strcmp(cmdstr, "start") == 0)
     start(1);
+  else if (strcmp(cmdstr, "repeat") == 0)
+    start(3);
   else if (strncmp(cmdstr, "set ", 4) == 0)
   {
     uint32_t i, val, ts;
