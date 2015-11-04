@@ -79,10 +79,10 @@ void start(int autostart)
   reset_on_serial = 1;
   // do the magic
   do {
-    LATASET = 0x1;		// indicate the run has begun
+    LATASET = 0x1;      // indicate the run has begun
     run(autostart);
-    LATACLR = 0x1;		// indicate the run has ended
-  } while (autostart < 0);	// repeat run?
+    LATACLR = 0x1;      // indicate the run has ended
+  } while (autostart < 0);  // repeat run?
   // do not reset on serial
   reset_on_serial = 0;
   Serial.println("done");
@@ -227,7 +227,7 @@ void loop( ) {
       Serial.println("invalid value");
     else {
       // it's a regular instruction! HI word is the timesteps, LO word is the port value
-      ts -= MIN_PULSE-1;	// account for overhead
+      ts -= MIN_PULSE-1;    // account for overhead
       instructions[i] = (ts<<16)|val;
       Serial.println("ok");
     }
