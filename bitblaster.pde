@@ -228,7 +228,7 @@ void loop( ) {
         Serial.println("invalid request");
     } else if (ts < MIN_PULSE)
       Serial.println("timestep too short");
-    else if (ts > 65535)
+    else if (ts > 32765)
       Serial.println("timestep too long");
     else if (val > 65535)
       Serial.println("invalid value");
