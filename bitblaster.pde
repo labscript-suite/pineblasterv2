@@ -239,9 +239,11 @@ void loop( ) {
     else if (i >= MAX_INSTR)
       Serial.println("invalid address");
     else {
-      Serial.print(instructions[i] & 0xFF, HEX);
+      uint16_t len = instructions[i] >> 16;       // high-word is timesteps
+      len += MIN_PULSE-1;                         // correct for overhead
+      Serial.print(instructions[i] & 0xFF, HEX);  // low-word is data
       Serial.print(" ");
-      Serial.println(instructions[i] >> 16);
+      Serial.println(len);
     }
   }
   else if (strcmp(cmdstr, "len") == 0) {
