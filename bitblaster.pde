@@ -87,6 +87,7 @@ void start(int mode)
     LATASET = 0x1;      // indicate the run has begun
     run(mode & 1);
     LATACLR = 0x1;      // indicate the run has ended
+    WDTCONSET = 0x1;    // set watchdog WDTCLR bit
   } while (mode & 2);   // repeat run?
   // do not reset on serial
   reset_on_serial = 0;
@@ -110,7 +111,7 @@ int run(int autostart)
   asm volatile ("la $t6, IPC0\n\t");
   
   // if not autostart, wait for trigger
-  if (autostart <= 0) {
+  if (!autostart) {
     // high-level activation of interrupt
     LATASET = 0x2;                           // indicate we're waiting for a trigger
     attachInterrupt(0, 0, RISING);           // attach the interrupt handler
