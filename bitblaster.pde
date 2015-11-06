@@ -214,6 +214,14 @@ void loop( ) {
     start(1);
   else if (strcmp(cmdstr, "repeat") == 0)
     start(3);
+  else if (strncmp(cmdstr, "load ", 5) == 0)
+  {
+    // expect a HEX string of length 4N containing all the instructions (limited by buffer size)
+  }
+  else if (strcmp(cmdstr, "dump") == 0)
+  {
+    // dump instructions array as a HEX string
+  }
   else if (strncmp(cmdstr, "set ", 4) == 0)
   {
     uint32_t i, val, ts;
