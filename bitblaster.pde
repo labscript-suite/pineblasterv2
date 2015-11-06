@@ -100,9 +100,8 @@ int run(int autostart)
   asm volatile (".set noreorder\n\t":::"t0","t1","t2","t3","t4", "t5", "t6", "t7", "k0", "k1", "v0", "v1");
   // load the address of the output buffer into register $t0
   asm volatile ("la $t0, LATB\n\t");
-  asm volatile ("la $t1, LATACLR\n\t");
-  asm volatile ("la $t8, LATAINV\n\t");
-  asm volatile ("li $t9, 4\n\t");
+  asm volatile ("la $t1, LATAINV\n\t");
+  asm volatile ("li $t8, 4\n\t");
   // load the instructions array into register $t2
   asm volatile ("la $t2, instructions\n\t");
   // load the time into register $t3
@@ -125,7 +124,7 @@ int run(int autostart)
     // wait until the trigger happens
     asm volatile ("li $t7, 0x2\n\t");
     asm volatile ("trig_wait: wait\n\t");    // put the cpu into wait mode
-    asm volatile ("lw $t7, 0($t1)");         // indicate we received a trigger by writing 0x2 ($t7) into LATACLR ($t1)
+    asm volatile ("lw $t7, 0($t1)");         // equivalent to LATAINV = 0x2
   } else
     autostart = 0;  // we autostart this one, but not next time
   
@@ -135,7 +134,7 @@ int run(int autostart)
   // a nop to make the minimum pulse time an integer number of instructions
   //asm volatile ("nop\n\t");
   // blink the indicator (equivalent to LATAINV = 0x4)
-  asm volatile ("lw $t9, 0($t8)");
+  asm volatile ("lw $t8, 0($t1)");
   // wait for the delay time
   asm volatile ("wait_loop: bne $t3, $zero, wait_loop\n\t");
     asm volatile ("addi $t3, -1\n\t");  // decrement within branch slot
