@@ -101,6 +101,8 @@ int run(int autostart)
   // load the address of the output buffer into register $t0
   asm volatile ("la $t0, LATB\n\t");
   asm volatile ("la $t1, LATACLR\n\t");
+  asm volatile ("la $t8, LATAINV\n\t");
+  asm volatile ("li $t9, 4\n\t");
   // load the instructions array into register $t2
   asm volatile ("la $t2, instructions\n\t");
   // load the time into register $t3
@@ -131,7 +133,9 @@ int run(int autostart)
   // registers already be loaded, so write straight to PORTB
   asm volatile ("output: sw $t4, 0($t0)\n\t");
   // a nop to make the minimum pulse time an integer number of instructions
-  asm volatile ("nop\n\t");
+  //asm volatile ("nop\n\t");
+  // blink the indicator (equivalent to LATAINV = 0x4)
+  asm volatile ("lw $t9, 0($t8)");
   // wait for the delay time
   asm volatile ("wait_loop: bne $t3, $zero, wait_loop\n\t");
     asm volatile ("addi $t3, -1\n\t");  // decrement within branch slot
@@ -185,8 +189,8 @@ void setup( ) {
   // configure the digital ports
   TRISB = 0;      // set PORTB to become entirely outputs
   LATB = 0;       // set PORTB to LO
-  TRISACLR = 0x3; // set bits 0 and 1 of PORTA to be outputs
-  LATACLR = 0x3;  // set those bits to LO
+  TRISACLR = 0x7; // set bits 0 and 1 of PORTA to be outputs
+  LATACLR = 0x7;  // set those bits to LO
   // start the serial interface
   Serial.begin(57600);
   Serial.println("ready");
