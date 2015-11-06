@@ -18,6 +18,8 @@ https://bitbucket.org/labscript_suite/pineblaster
 // a big array
 uint32_t instructions[MAX_INSTR + 1];
 
+uint32_t nloops = 0;
+
 // what's the shortest pulse we can execute?
 #define MIN_PULSE 6
 
@@ -83,11 +85,13 @@ void start(int mode)
   // set serial comms to reset the CPU
   reset_on_serial = 1;
   // do the magic
+  nloops = 0;
   do {
     LATASET = 0x1;      // indicate the run has begun
     run(mode & 1);
     LATACLR = 0x1;      // indicate the run has ended
     WDTCONSET = 0x1;    // set watchdog WDTCLR bit
+    ++nloops;
   } while (mode & 2);   // repeat run?
   // do not reset on serial
   reset_on_serial = 0;
@@ -137,7 +141,7 @@ int run(int autostart)
   asm volatile ("lw $t8, 0($t1)");
   // wait for the delay time
   asm volatile ("wait_loop: bne $t3, $zero, wait_loop\n\t");
-    asm volatile ("addi $t3, -1\n\t");  // decrement within branch slot
+    asm volatile ("addiu $t3, -1\n\t");  // decrement within branch slot
   // increment our instruction pointer
   asm volatile ("addi $t2, 4\n\t");
   // load the time in
@@ -236,7 +240,7 @@ void loop( ) {
         Serial.println("invalid request");
     } else if (ts < MIN_PULSE)
       Serial.println("timestep too short");
-    else if (ts > 32767)
+    else if (ts > 65535)
       Serial.println("timestep too long");
     else if (val > 65535)
       Serial.println("invalid value");
