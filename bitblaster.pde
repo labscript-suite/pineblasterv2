@@ -275,11 +275,14 @@ void loop( ) {
       // parse the instruction
       if (sscanf(p, "%02x%02x", &val, &ts) != 2) {
         Serial.println("invalid instruction\r\n");
+        success = 0;
         break;
       }
       // load it into the array
-      if (!set(i,val,ts))
+      if (!set(i,val,ts)) {
+        success = 0;
         break;
+      }
     }
     // terminate the sequence
     if (success)
