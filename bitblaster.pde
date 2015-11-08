@@ -200,21 +200,6 @@ void setup( ) {
   digitalWrite(PIN_LED1,HIGH);
 }
 
-int hex_to_u16(char *p, uint16_t *out)
-{
-  char c;
-  if (!out) return -1;
-  *out = 0;
-  for (int i=0; i<2; ++i) {
-    *out <<= 8;
-    if ((*p >= '0')&&(*p <= '9'))       *out |= *p - '0';
-    else if ((*p >= 'a')&&(*p >= 'z'))  *out |= *p - 'a' + 10;
-    else if ((*p >= 'A')&&(*p >= 'Z'))  *out |= *p - 'A' + 10;
-    else                                return 1;
-  }
-  return 0;
-}
-
 int set(int i, uint16_t val, uint16_t ts)
 {
   if (i >= MAX_INSTR)
@@ -273,15 +258,21 @@ void loop( ) {
     uint16_t val, ts;
     for (i=0; *p; p+=4, ++i)
     {
-      if (hex_to_u16(p,&val) || hex_to_u16(p,&ts)) {
+      // parse the instruction
+      if (sscanf(p, "%02x%02x", &val, &ts) != 2) {
         Serial.println("invalid instruction\r\n");
         break;
       }
+      // load it into the array
+      if (!set(i,val,ts))
+        break;
     }
+    // terminate the sequence
     if (success)
-      instructions[i] = 0;  // append STOP
+      instructions[i] = 0;  // append STOP just in case
     else
       instructions[0] = 0;  // wipe the list
+    // respond to host
     if (success)
       Serial.println("ok\r\n");
   }
