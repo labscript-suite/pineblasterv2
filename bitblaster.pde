@@ -200,7 +200,7 @@ void setup( ) {
   digitalWrite(PIN_LED1,HIGH);
 }
 
-int set(int i, uint16_t val, uint16_t ts)
+int set(int i, uint32_t val, uint32_t ts)
 {
   if (i >= MAX_INSTR)
     Serial.println("invalid address");
@@ -236,7 +236,22 @@ int set(int i, uint16_t val, uint16_t ts)
   return 1;
 }
 
+int get(int i, uint32_t *val, uint32_t *len)
+{
+  if (!val || !len)
+    return -1;
+  if (i >= MAX_INSTR) {
+    Serial.println("invalid address");
+    return 1;
+  }
+  *len = instructions[i] >> 16;   // high-word is timesteps
+  *len += MIN_PULSE-1;            // correct for overhead
+  *val = instructions[i] & 0xFF;  // low-word is data
+  return 0;
+}
+
 void loop( ) {
+  uint32_t i, val, ts;
   // wait for a command
   readline();
   // check what the command was
@@ -254,8 +269,7 @@ void loop( ) {
   {
     // expect a HEX string of length 4N containing all the instructions (limited by buffer size)
     char *p = cmdstr+5;
-    int success = 1, i;
-    uint16_t val, ts;
+    int success = 1;
     for (i=0; *p; p+=4, ++i)
     {
       // parse the instruction
@@ -279,10 +293,17 @@ void loop( ) {
   else if (strcmp(cmdstr, "dump") == 0)
   {
     // dump instructions array as a HEX string
+    char buffer[5];
+    for (i=0; instructions[i]; ++i)
+    {
+      if (get(i,&val,&ts)) break;
+      sprintf(buffer, "%02X%02X", val, ts);
+      Serial.print(buffer);
+    }
+    Serial.println("");
   }
   else if (strncmp(cmdstr, "set ", 4) == 0)
   {
-    uint32_t i, val, ts;
     byte nparsed = sscanf(cmdstr, "%*s %u %x %u", &i, &val, &ts);
     if (nparsed < 3)
         Serial.println("invalid request");
@@ -293,18 +314,14 @@ void loop( ) {
     uint32_t i;
     if (sscanf(cmdstr, "%*s %u", &i) != 1)
       Serial.println("invalid request");
-    else if (i >= MAX_INSTR)
-      Serial.println("invalid address");
     else {
-      uint16_t len = instructions[i] >> 16;       // high-word is timesteps
-      len += MIN_PULSE-1;                         // correct for overhead
-      Serial.print(instructions[i] & 0xFF, HEX);  // low-word is data
+      get(i,&val,&ts);
+      Serial.print(val,HEX);
       Serial.print(" ");
-      Serial.println(len);
+      Serial.println(ts,HEX);
     }
   }
   else if (strcmp(cmdstr, "len") == 0) {
-    uint32_t i;
     for (i = 0; i < MAX_INSTR; ++i)
       if (!instructions[i])  // stop instruction
         break;
