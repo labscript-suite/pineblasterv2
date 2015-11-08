@@ -11,7 +11,7 @@ https://bitbucket.org/labscript_suite/pineblaster
 #include <plib.h>
 
 // do we want to hold the final instruction or not?
-#define HOLD_FINAL_INSTRUCTION	1
+#define HOLD_FINAL_INSTRUCTION  1
 
 // what's the RAM-limited number of instructions we can store?
 #define MAX_INSTR 30000
@@ -200,6 +200,57 @@ void setup( ) {
   digitalWrite(PIN_LED1,HIGH);
 }
 
+int hex_to_u16(char *p, uint16_t *out)
+{
+  char c;
+  if (!out) return -1;
+  *out = 0;
+  for (int i=0; i<2; ++i) {
+    *out <<= 8;
+    if ((*p >= '0')&&(*p <= '9'))       *out |= *p - '0';
+    else if ((*p >= 'a')&&(*p >= 'z'))  *out |= *p - 'a' + 10;
+    else if ((*p >= 'A')&&(*p >= 'Z'))  *out |= *p - 'A' + 10;
+    else                                return 1;
+  }
+  return 0;
+}
+
+int set(int i, uint16_t val, uint16_t ts)
+{
+  if (i >= MAX_INSTR)
+    Serial.println("invalid address");
+  else if (ts == 0) {
+    // either a stop or a wait instruction
+    instructions[i] = 0;
+    if (val == 0) {
+      // stop instruction
+      instructions[i] = 0;
+      Serial.println("ok");
+      return 0;
+    } else if (val == 1) {
+      // wait instruction:
+      instructions[i] = 0x00FF;
+      Serial.println("ok");
+      return 0;
+    } else
+      Serial.println("invalid stop instruction");
+  }
+  else if (ts < MIN_PULSE)
+    Serial.println("timestep too short");
+  else if (ts > 65535)
+    Serial.println("timestep too long");
+  else if (val > 65535)
+    Serial.println("invalid value");
+  else {
+    // it's a regular instruction! HI word is the timesteps, LO word is the port value
+    ts -= MIN_PULSE-1;    // account for overhead
+    instructions[i] = (ts<<16)|val;
+    Serial.println("ok");
+    return 0;
+  }
+  return 1;
+}
+
 void loop( ) {
   // wait for a command
   readline();
@@ -217,6 +268,22 @@ void loop( ) {
   else if (strncmp(cmdstr, "load ", 5) == 0)
   {
     // expect a HEX string of length 4N containing all the instructions (limited by buffer size)
+    char *p = cmdstr+5;
+    int success = 1, i;
+    uint16_t val, ts;
+    for (i=0; *p; p+=4, ++i)
+    {
+      if (hex_to_u16(p,&val) || hex_to_u16(p,&ts)) {
+        Serial.println("invalid instruction\r\n");
+        break;
+      }
+    }
+    if (success)
+      instructions[i] = 0;  // append STOP
+    else
+      instructions[0] = 0;  // wipe the list
+    if (success)
+      Serial.println("ok\r\n");
   }
   else if (strcmp(cmdstr, "dump") == 0)
   {
@@ -228,34 +295,8 @@ void loop( ) {
     byte nparsed = sscanf(cmdstr, "%*s %u %x %u", &i, &val, &ts);
     if (nparsed < 3)
         Serial.println("invalid request");
-    else if (i >= MAX_INSTR)
-      Serial.println("invalid address");
-    else if (ts == 0)
-    {
-      // either a stop or a wait instruction
-      instructions[i] = 0;
-      if (val == 0) {
-        // stop instruction
-        instructions[i] = 0;
-        Serial.println("ok");
-      } else if (val == 1) {
-        // wait instruction:
-        instructions[i] = 0x00FF;
-        Serial.println("ok");
-      } else
-        Serial.println("invalid request");
-    } else if (ts < MIN_PULSE)
-      Serial.println("timestep too short");
-    else if (ts > 65535)
-      Serial.println("timestep too long");
-    else if (val > 65535)
-      Serial.println("invalid value");
-    else {
-      // it's a regular instruction! HI word is the timesteps, LO word is the port value
-      ts -= MIN_PULSE-1;    // account for overhead
-      instructions[i] = (ts<<16)|val;
-      Serial.println("ok");
-    }
+    else
+        set(i, val, ts);
   }
   else if (strncmp(cmdstr, "get ", 4) == 0) {
     uint32_t i;
