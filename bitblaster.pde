@@ -210,12 +210,10 @@ int set(int i, uint32_t val, uint32_t ts)
     if (val == 0) {
       // stop instruction
       instructions[i] = 0;
-      Serial.println("ok");
       return 0;
     } else if (val == 1) {
       // wait instruction:
       instructions[i] = 0x00FF;
-      Serial.println("ok");
       return 0;
     } else
       Serial.println("invalid stop instruction");
@@ -230,7 +228,6 @@ int set(int i, uint32_t val, uint32_t ts)
     // it's a regular instruction! HI word is the timesteps, LO word is the port value
     ts -= MIN_PULSE-1;    // account for overhead
     instructions[i] = (ts<<16)|val;
-    Serial.println("ok");
     return 0;
   }
   return 1;
@@ -312,9 +309,10 @@ void loop( ) {
   {
     byte nparsed = sscanf(cmdstr, "%*s %u %x %u", &i, &val, &ts);
     if (nparsed < 3)
-        Serial.println("invalid request");
+      Serial.println("invalid request");
     else
-        set(i, val, ts);
+      if (!set(i, val, ts))
+        Serial.println("ok");
   }
   else if (strncmp(cmdstr, "get ", 4) == 0) {
     uint32_t i;
