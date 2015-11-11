@@ -288,7 +288,7 @@ void loop( ) {
       instructions[0] = 0;  // wipe the list
     // respond to host
     if (success)
-      Serial.println("ok\r\n");
+      Serial.println("ok");
   }
   else if (strcmp(cmdstr, "dump") == 0)
   {
