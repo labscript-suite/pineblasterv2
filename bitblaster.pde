@@ -86,6 +86,7 @@ void start(int mode)
   reset_on_serial = 1;
   // do the magic
   nloops = 0;
+  digitalWrite(PIN_LED2,HIGH);
   do {
     LATASET = 0x1;      // indicate the run has begun
     run(mode & 1);
@@ -93,6 +94,7 @@ void start(int mode)
     WDTCONSET = 0x1;    // set watchdog WDTCLR bit
     ++nloops;
   } while (mode & 2);   // repeat run?
+  digitalWrite(PIN_LED2,LOW);
   // do not reset on serial
   reset_on_serial = 0;
   Serial.println("done");
@@ -198,6 +200,8 @@ void setup( ) {
   // light up the LED
   pinMode(PIN_LED1,OUTPUT);
   digitalWrite(PIN_LED1,HIGH);
+  pinMode(PIN_LED2,OUTPUT);
+  digitalWrite(PIN_LED2,LOW);
 }
 
 int set(int i, uint32_t val, uint32_t ts)
