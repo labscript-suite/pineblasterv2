@@ -303,7 +303,10 @@ void loop( ) {
       sprintf(buffer, "%02X%02X", val, ts);
       Serial.print(buffer);
     }
-    Serial.println("");
+    if (i==0)
+      Serial.println("no instructions");
+    else
+      Serial.println("");
   }
   else if (strncmp(cmdstr, "set ", 4) == 0)
   {
