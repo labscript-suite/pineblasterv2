@@ -245,7 +245,7 @@ int get(int i, uint32_t *val, uint32_t *len)
     return 1;
   }
   *len = instructions[i] >> 16;   // high-word is timesteps
-  *len += MIN_PULSE-1;            // correct for overhead
+  if (len) *len += MIN_PULSE-1;   // correct for overhead
   *val = instructions[i] & 0xFF;  // low-word is data
   return 0;
 }
