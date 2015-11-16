@@ -74,6 +74,7 @@ void __attribute__((naked, nomips16)) IntReset(void)
 
 void start(int mode)
 {
+  int nloops;
   // operation depends on value of "mode":
   //   0 = hardware triggered, single run
   //   1 = software triggered, single run
@@ -84,8 +85,7 @@ void start(int mode)
   reset_on_serial = 1;
   // do the magic
   digitalWrite(PIN_LED2,HIGH);
-  for (int nloops = 0; ; ++nloops);
-  while (1) {
+  for (nloops = 0; ; ++nloops) {
     LATASET = 0x1;      // indicate the run has begun
     run(mode & 1);      // do the work
     LATACLR = 0x1;      // indicate the run has ended
