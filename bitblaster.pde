@@ -160,11 +160,8 @@ int run(int autostart)
   asm volatile ("j trig_wait\n\t");
   
   // *** all done ***
-#if HOLD_FINAL_INSTRUCTION
   asm volatile ("end: nop\n\t");
-#else
-  asm volatile ("end: sw $zero, 0($t0)\n\t");
-#endif
+  if (!HOLD_FINAL_INSTRUCTION) LATB = 0x0;
 }
 
 void readline( ) {
