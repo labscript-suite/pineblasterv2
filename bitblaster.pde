@@ -10,9 +10,6 @@ https://bitbucket.org/labscript_suite/pineblaster
 */
 #include <plib.h>
 
-// do we want to hold the final instruction or not?
-#define HOLD_FINAL_INSTRUCTION  1
-
 // what's the RAM-limited number of instructions we can store?
 #define MAX_INSTR 30000
 // a big array
@@ -22,6 +19,7 @@ uint32_t instructions[MAX_INSTR + 1];
 #define MIN_PULSE 6
 
 volatile int reset_on_serial = 0;
+volatile int hold_final = 1;
 
 #define MAX_STR 64
 char cmdstr[MAX_STR+1] = "";
@@ -88,16 +86,16 @@ void start(int mode)
   // set serial comms to reset the CPU
   reset_on_serial = 1;
   // do the magic
-  digitalWrite(PIN_LED2,HIGH);
   for (nloops = 0; ; ++nloops) {
+    digitalWrite(PIN_LED2,HIGH);
     LATASET = 0x1;      // indicate the run has begun
     run(mode & 0x1);    // do the work
     LATACLR = 0x1;      // indicate the run has ended
     WDTCONSET = 0x1;    // set watchdog WDTCLR bit
+    digitalWrite(PIN_LED2,LOW);
     if ((mode & 0x2) == 0) break;
     Serial.println(nloops);
   }
-  digitalWrite(PIN_LED2,LOW);
   // do not reset on serial
   reset_on_serial = 0;
   Serial.println("done");
@@ -134,7 +132,7 @@ int run(int autostart)
     asm volatile ("trig_wait: wait\n\t");    // put the cpu into wait mode
     asm volatile ("lw $t7, 0($t1)");         // equivalent to LATAINV = 0x2
   } else
-    autostart = 0;  // we autostart this one, but not next time
+    autostart = 0;  // we autostart this one, but not next time (i.e. for "hold and wait" instruction)
   
   // ***** MAKE THE MAGIC HAPPEN *****
   // registers already be loaded, so write straight to PORTB
@@ -164,7 +162,7 @@ int run(int autostart)
   
   // *** all done ***
   asm volatile ("end: nop\n\t");
-  if (!HOLD_FINAL_INSTRUCTION) LATB = 0x0;
+  if (!hold_final) LATB = 0x0;
 }
 
 void readline( ) {
@@ -191,10 +189,10 @@ void setup( ) {
   // configure the digital ports
   TRISB = 0;      // set PORTB to become entirely outputs
   LATB = 0;       // set PORTB to LO
-  TRISACLR = 0x7; // set bits 0 and 1 of PORTA to be outputs
+  TRISACLR = 0x7; // set bits 0--2 of PORTA to be outputs
   LATACLR = 0x7;  // set those bits to LO
   // start the serial interface
-  Serial.begin(57600);
+  Serial.begin(115200);
   Serial.println("ready");
   // light up the LED
   pinMode(PIN_LED1,OUTPUT);
