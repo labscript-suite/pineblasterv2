@@ -80,6 +80,10 @@ void start(int mode)
   //   1 = software triggered, single run
   //   2 = hardware triggered, repeated infinitely
   //   3 = software triggered, repeated infinitely
+  if (instructions[0] == 0) {
+    Serial.println("empty sequence");
+    return;
+  }
   Serial.println("ok");
   // set serial comms to reset the CPU
   reset_on_serial = 1;
@@ -87,10 +91,10 @@ void start(int mode)
   digitalWrite(PIN_LED2,HIGH);
   for (nloops = 0; ; ++nloops) {
     LATASET = 0x1;      // indicate the run has begun
-    run(mode & 1);      // do the work
+    run(mode & 0x1);    // do the work
     LATACLR = 0x1;      // indicate the run has ended
     WDTCONSET = 0x1;    // set watchdog WDTCLR bit
-    if (mode & 2 == 0) break;
+    if ((mode & 0x2) == 0) break;
     Serial.println(nloops);
   }
   digitalWrite(PIN_LED2,LOW);
