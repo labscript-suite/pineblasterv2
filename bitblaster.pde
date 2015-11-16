@@ -103,7 +103,7 @@ void start(int mode)
 
 int run(int autostart)
 {
-  asm volatile (".set noreorder\n\t":::"t0","t1","t2","t3","t4", "t5", "t6", "t7", "k0", "k1", "v0", "v1");
+  asm volatile (".set noreorder\n\t");
   // load the address of the output buffer into register $t0
   asm volatile ("la $t0, LATB\n\t");
   asm volatile ("la $t1, LATAINV\n\t");
