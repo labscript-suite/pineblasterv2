@@ -136,8 +136,6 @@ int run(int autostart)
   // ***** MAKE THE MAGIC HAPPEN *****
   // registers already be loaded, so write straight to PORTB
   asm volatile ("output: sw $t4, 0($t0)\n\t");
-  // a nop to make the minimum pulse time an integer number of instructions
-  //asm volatile ("nop\n\t");
   // blink the indicator (equivalent to LATAINV = 0x4)
   asm volatile ("lw $t8, 0($t1)");
   // wait for the delay time
