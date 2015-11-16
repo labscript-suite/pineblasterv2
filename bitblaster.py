@@ -7,7 +7,7 @@ import serial
 import time
 
 CLOCK = 40e6
-BAUDRATE = 57600
+BAUDRATE = 115200
 CRLF = '\r\n'
 
 class BitBlaster:
