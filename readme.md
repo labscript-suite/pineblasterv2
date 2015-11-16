@@ -94,7 +94,10 @@ Communication
 The chipKIT has a USB-Serial FTDI bridge, which installs as a COM port.
 The device accepts commands as specified below.
 
-Serial communication is at 57600bps, ASCII-encoded with "CRLF" (`\r\n`) line termination.
+Serial communication is at 115200bps, ASCII-encoded with "CRLF" (`\r\n`) line termination.
+
+Note that the device is RESET when comms are connected, and may take 10 seconds to become ready to accept commands.
+The device will send the string `ready` when it is ready to accept communication.
 
 | Command           | Response     | Purpose                                         |
 |-------------------|--------------|-------------------------------------------------|
@@ -105,10 +108,17 @@ Serial communication is at 57600bps, ASCII-encoded with "CRLF" (`\r\n`) line ter
 | `get I`           | `J K`        | Get element I, J and K as per `set` command     |
 | `start`           | `ok`..`done` | Software-trigger sequence to begin immediately  |
 | `hwstart`         | `ok`..`done` | Begin the sequence on the next hardware trigger |
+| `repeat`          | `ok`..`1`..  | Continuous outputs on a software trigger        |
+| `hwrepeat`        | `ok`..`1`..  | Outputs the sequence on every hardware trigger  |
 | `reset`           | `ok`         | Reboot the Max32 unit                           |
 
 Note that the `start` and `hwstart` commands will respond immediately with `ok`, then send the string `done` when the sequence is complete.
 During this time, no commands will be accepted, to ensure accurate timing of the execution of the sequence.
+
+The convenience commands "repeat" and "hwrepeat" are provided for debugging, and will automatically continue to output the sequence.
+The device will respond with the iteration number upon each completion.
+Note that the device cannot recover from this mode as it will always be in "execution" state and never in the "ready and waiting" state.
+Closing the comm port will reset the device.
 
 **Moreover, any serial data received during this time will cause the unit to reset.**
 The unit operates autonomously, and to prevent interfering with precise timing, this is the only (software) way to interrupt a running sequence.
