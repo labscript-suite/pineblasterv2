@@ -18,8 +18,6 @@ https://bitbucket.org/labscript_suite/pineblaster
 // a big array
 uint32_t instructions[MAX_INSTR + 1];
 
-uint32_t nloops = 0;
-
 // what's the shortest pulse we can execute?
 #define MIN_PULSE 6
 
@@ -85,15 +83,16 @@ void start(int mode)
   // set serial comms to reset the CPU
   reset_on_serial = 1;
   // do the magic
-  nloops = 0;
   digitalWrite(PIN_LED2,HIGH);
-  do {
+  for (int nloops = 0; ; ++nloops);
+  while (1) {
     LATASET = 0x1;      // indicate the run has begun
-    run(mode & 1);
+    run(mode & 1);      // do the work
     LATACLR = 0x1;      // indicate the run has ended
     WDTCONSET = 0x1;    // set watchdog WDTCLR bit
-    ++nloops;
-  } while (mode & 2);   // repeat run?
+    if (mode & 2 == 0) break;
+    Serial.println(nloops);
+  }
   digitalWrite(PIN_LED2,LOW);
   // do not reset on serial
   reset_on_serial = 0;
