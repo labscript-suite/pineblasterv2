@@ -215,12 +215,12 @@ int set(int i, uint32_t val, uint32_t ts)
   else if (ts == 0) {
     // either a stop or a wait instruction
     instructions[i] = 0;
-    if ((val == 0)||(val == 0xFFFF) {
+    if ((val == 0)||(val == 0xFFFF)) {
       // stop or wait instruction
       instructions[i] = val;
       return 0;
     }
-	Serial.println("invalid stop instruction");
+    Serial.println("invalid stop instruction");
   }
   else if (ts < MIN_PULSE)
     Serial.println("timestep too short");
