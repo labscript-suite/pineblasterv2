@@ -111,9 +111,9 @@ int run(int autostart)
   // load the instructions array into register $t2
   asm volatile ("la $t2, instructions\n\t");
   // load the time into register $t3
-  asm volatile ("lh $t3, 2($t2)\n\t"); 
+  asm volatile ("lhu $t3, 2($t2)\n\t"); 
   // load the port value into register $t4
-  asm volatile ("lh $t4, 0($t2)\n\t"); 
+  asm volatile ("lhu $t4, 0($t2)\n\t"); 
   // load the address of IPC0 into register $t6
   asm volatile ("la $t6, IPC0\n\t");
   
@@ -145,18 +145,18 @@ int run(int autostart)
   // increment our instruction pointer
   asm volatile ("addi $t2, 4\n\t");
   // load the time in
-  asm volatile ("lh $t3, 2($t2)\n\t");
+  asm volatile ("lhu $t3, 2($t2)\n\t");
   // repeat the loop unless a stop instruction
   asm volatile ("bne $t3, $zero, output\n\t");
     // load the the next delay time in:
-    asm volatile ("lh $t4, 0($t2)\n\t"); // load value within branch slot
+    asm volatile ("lhu $t4, 0($t2)\n\t"); // load value within branch slot
   
   // *** stop instruction ***
   // if the value is also zero, it's all over!
   asm volatile ("beq $t4, $zero, end\n\t");
   // load the next values (note: don't care about branch slot this time)
-  asm volatile ("lh $t3, 2($t2)\n\t");
-  asm volatile ("lh $t4, 0($t2)\n\t");
+  asm volatile ("lhu $t3, 2($t2)\n\t");
+  asm volatile ("lhu $t4, 0($t2)\n\t");
   // wait for hardware trig 
   asm volatile ("j trig_wait\n\t");
   
