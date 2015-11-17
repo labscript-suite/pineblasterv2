@@ -242,9 +242,9 @@ int get(int i, uint32_t *val, uint32_t *len)
     Serial.println("invalid address");
     return 1;
   }
-  *len = instructions[i] >> 16;   // high-word is timesteps
-  if (*len) *len += MIN_PULSE-1;  // correct for overhead
-  *val = instructions[i] & 0xFF;  // low-word is data
+  *len = instructions[i] >> 16;     // high-word is timesteps
+  if (*len) *len += MIN_PULSE-1;    // correct for overhead
+  *val = instructions[i] & 0xFFFF;  // low-word is data
   return 0;
 }
 
@@ -268,10 +268,10 @@ void loop( ) {
     // expect a HEX string of length 4N containing all the instructions (limited by buffer size)
     char *p = cmdstr+5;
     int success = 1;
-    for (i=0; *p; p+=4, ++i)
+    for (i=0; *p; p+=8, ++i)
     {
       // parse the instruction
-      if (sscanf(p, "%02x%02x", &val, &ts) != 2) {
+      if (sscanf(p, "%04x%04x", &val, &ts) != 2) {
         Serial.println("invalid instruction");
         success = 0;
         break;
@@ -294,11 +294,11 @@ void loop( ) {
   else if (strcmp(cmdstr, "dump") == 0)
   {
     // dump instructions array as a HEX string
-    char buffer[5];
+    char buffer[10];
     for (i=0; instructions[i]; ++i)
     {
       if (get(i,&val,&ts)) break;
-      sprintf(buffer, "%02X%02X", val, ts);
+      sprintf(buffer, "%04X%04X", val, ts);
       Serial.print(buffer);
     }
     if (i==0)
@@ -323,7 +323,7 @@ void loop( ) {
       get(i,&val,&ts);
       Serial.print(val,HEX);
       Serial.print(" ");
-      Serial.println(ts,HEX);
+      Serial.println(ts);
     }
   }
   else if (strcmp(cmdstr, "len") == 0) {
