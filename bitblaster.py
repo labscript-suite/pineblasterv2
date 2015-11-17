@@ -41,7 +41,7 @@ class BitBlaster:
 		self.write(cmd)
 		resp = self.read()
 		if not resp == expect:
-			raise self.SerialError('Unexpected response: '+resp)
+			raise serial.SerialException('Unexpected response: "%s"'%resp)
 			
 	def bitstream(self,vals,dt=None,timesteps=False,adapt=True):
 		"""Program the unit to output the values in `vals` every `dt` seconds.
@@ -98,6 +98,23 @@ class BitBlaster:
 		else:
 			return self.wait(wait)	# wait for specified timeout
 	
+	def repeat(self,hwtrig=True,block=True):
+		"""Instruct the unit to continually output the sequence.
+		Note that the unit will become unresponsive until reset (e.g. with further serial communication).
+		If `block` is True then the function will block, checking that the unit is executing correctly."""
+		if hwtrig:
+			self.check('hwrepeat')
+		else:
+			self.check('repeat')
+		if block:
+			i = 0
+			while True:
+				# note that this is an infinite loop by design
+				status = self.read()
+				if status != str(i):
+					raise RuntimeError('Unexpected response at iteration %i: "%s"'%(i,status))
+				i = i+1
+	
 	def wait(self,timeout=None,expect='done'):
 		"""Waits for the unit to return "done" at the end of a sequence.
 		A RuntimeError is raised if the sequence does not terminate within `timeout` seconds.
@@ -108,7 +125,7 @@ class BitBlaster:
 			if resp == expect:
 				return
 			elif resp != '':
-				raise self.SerialError('Unexpected response: '+resp)
+				raise serial.SerialException('Unexpected response: "%s"'%resp)
 			if bailout is not None and time.time() > bailout:
 				raise RuntimeError('Timeout')
 			time.sleep(5e-3)
