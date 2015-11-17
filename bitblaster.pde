@@ -101,7 +101,7 @@ void start(int mode)
   Serial.println("done");
 }
 
-int run(int autostart)
+void run(int autostart)
 {
   asm volatile (".set noreorder\n\t");
   // load the address of the output buffer into register $t0
@@ -130,7 +130,7 @@ int run(int autostart)
     // wait until the trigger happens
     asm volatile ("li $t7, 0x2\n\t");
     asm volatile ("trig_wait: wait\n\t");    // put the cpu into wait mode
-    asm volatile ("lw $t7, 0($t1)");         // equivalent to LATAINV = 0x2
+    asm volatile ("lw $t7, 0($t1)\n\t");     // equivalent to LATAINV = 0x2
   } else
     autostart = 0;  // we autostart this one, but not next time (i.e. for "hold and wait" instruction)
   
@@ -138,7 +138,7 @@ int run(int autostart)
   // registers already be loaded, so write straight to PORTB
   asm volatile ("output: sw $t4, 0($t0)\n\t");
   // blink the indicator (equivalent to LATAINV = 0x4)
-  asm volatile ("lw $t8, 0($t1)");
+  asm volatile ("lw $t8, 0($t1)\n\t");
   // wait for the delay time
   asm volatile ("wait_loop: bne $t3, $zero, wait_loop\n\t");
     asm volatile ("addiu $t3, -1\n\t");  // decrement within branch slot
@@ -163,6 +163,9 @@ int run(int autostart)
   // *** all done ***
   asm volatile ("end: nop\n\t");
   if (!hold_final) LATB = 0x0;
+  
+  // CRITICAL: undo the "noreorder" command (issue #3)
+  asm volatile (".set reorder\n\t");
 }
 
 void readline( ) {
