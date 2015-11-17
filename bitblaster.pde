@@ -103,11 +103,12 @@ void start(int mode)
 
 void run(int autostart)
 {
+  // tell the assembler to do exactly what we say (make sure to undo later)
   asm volatile (".set noreorder\n\t");
   // load the address of the output buffer into register $t0
   asm volatile ("la $t0, LATB\n\t");
   asm volatile ("la $t1, LATAINV\n\t");
-  asm volatile ("li $t8, 4\n\t");
+  asm volatile ("li $t8, 0x4\n\t");
   // load the instructions array into register $t2
   asm volatile ("la $t2, instructions\n\t");
   // load the time into register $t3
@@ -135,6 +136,8 @@ void run(int autostart)
     autostart = 0;  // we autostart this one, but not next time (i.e. for "hold and wait" instruction)
   
   // ***** MAKE THE MAGIC HAPPEN *****
+  // NB: modifying code here requires updating MIN_PULSE (= #commands / 2)
+  // ---
   // registers already be loaded, so write straight to PORTB
   asm volatile ("output: sw $t4, 0($t0)\n\t");
   // blink the indicator (equivalent to LATAINV = 0x4)
@@ -164,11 +167,12 @@ void run(int autostart)
   asm volatile ("end: nop\n\t");
   if (!hold_final) LATB = 0x0;
   
-  // CRITICAL: undo the "noreorder" command (issue #3)
+  // CRITICAL: undo the "noreorder" command (see issue #3)
   asm volatile (".set reorder\n\t");
 }
 
 void readline( ) {
+  // get data off the serial line
   int i = 0;
   while (i < MAX_STR)  // failsafe to prevent overrun
   {
@@ -211,22 +215,18 @@ int set(int i, uint32_t val, uint32_t ts)
   else if (ts == 0) {
     // either a stop or a wait instruction
     instructions[i] = 0;
-    if (val == 0) {
-      // stop instruction
-      instructions[i] = 0;
+    if ((val == 0)||(val == 0xFFFF) {
+      // stop or wait instruction
+      instructions[i] = val;
       return 0;
-    } else if (val == 1) {
-      // wait instruction:
-      instructions[i] = 0x00FF;
-      return 0;
-    } else
-      Serial.println("invalid stop instruction");
+    }
+	Serial.println("invalid stop instruction");
   }
   else if (ts < MIN_PULSE)
     Serial.println("timestep too short");
-  else if (ts > 65535)
+  else if (ts > 0xFFFF)
     Serial.println("timestep too long");
-  else if (val > 65535)
+  else if (val > 0xFFFF)
     Serial.println("invalid value");
   else {
     // it's a regular instruction! HI word is the timesteps, LO word is the port value
