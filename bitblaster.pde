@@ -270,6 +270,11 @@ void loop( ) {
     int success = 1;
     for (i=0; *p; p+=8, ++i)
     {
+      // is it a continuation?
+      if ((p[0] == '+') && (p[1] == '\0')) {
+        readline();
+        p = cmdstr;
+      }
       // parse the instruction
       if (sscanf(p, "%04x%04x", &val, &ts) != 2) {
         Serial.println("invalid instruction");
