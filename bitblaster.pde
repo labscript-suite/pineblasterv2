@@ -21,7 +21,7 @@ uint32_t instructions[MAX_INSTR + 1];
 volatile int reset_on_serial = 0;
 volatile int hold_final = 1;
 
-#define MAX_STR 64
+#define MAX_STR 128
 char cmdstr[MAX_STR+1] = "";
 
 void __attribute__((naked, at_vector(3), nomips16)) ExtInt0Handler(void)
