@@ -98,22 +98,49 @@ void run_clock(int runcache){
   if (autostart==0){
     attachInterrupt(0,0,RISING);
   }
-  if (runcache==1)
-  {
-    asm volatile ("li $t7, 0x1\n\t");
-  }
-  else
-  {
-    asm volatile ("li $t7, 0x0\n\t");
-  }
+
+  #if defined(__PIC32MZXX__)  
+    if (runcache==1)
+    {
+      asm volatile ("li $t7, 0x1\n\t");
+    }
+    else
+    {
+      asm volatile ("li $t7, 0x0\n\t");
+    }
+  #else
+    // 32 bit mode, no prescaler:
+    T2CON = 0x0008;
+    OC2CON = 0x0000; 
+    OC2CON = 0x0023; 
+    OC2R = 0;
+    PR2 = 0;
+    TMR2 = 0;
+    TMR3 = 0;
+    asm volatile ("nop\n\t");
+    T2CONSET = 0x8000; 
+    OC2CONSET = 0x8000; 
+  #endif
+
   
   // don't fill our branch delay slots with nops, thank you very much:
   asm volatile (".set noreorder\n\t":::"t0","t1","t2","t3","t4", "t5", "t6", "t7", "t8", "k0", "k1", "v0", "v1");
-  // load the ram address of PR2 into register $t0:
-  asm volatile ("la $t0, LATB\n\t");
-  // store enabled channels
-  asm volatile ("la $t1, enabled_channels\n\t");
-  asm volatile ("lhu $t1, 0($t1)\n\t");
+  #if defined(__PIC32MZXX__)
+    // load the ram address of the output port into register $t0:
+    asm volatile ("la $t0, LATE\n\t");
+    // store enabled channels
+    asm volatile ("la $t1, enabled_channels\n\t");
+    asm volatile ("lhu $t1, 0($t1)\n\t");
+  #else
+    // load the ram address of PR2 into register $t0:
+    asm volatile ("la $t0, PR2\n\t");
+    // load the ram address of OC2R into register $t1:
+    asm volatile ("la $t1, OC2R\n\t");
+      // load the address of OC2CON into register $t7:
+    asm volatile ("la $t7, OC2CON\n\t");
+    // a small constant used for getting to the right part of the waveform:
+    asm volatile ("addi $t8, $zero, 2\n\t");
+  #endif
   // load the address of the instruction array into register $t2:
   asm volatile ("la $t2, resume_address\n\t");
   asm volatile ("lw $t2, 0($t2)\n\t");
@@ -163,78 +190,104 @@ void run_clock(int runcache){
   // the branch instructions do. This nop ensures nothing critical starts 
   // before the detachment is finished
   asm volatile ("nop\n\t");
-  
-  // We:
-  //   * have the first 2 instructions by full of 0's
-  //   * jump to the low half of the wait loop (wait_loop2)
-  //   *   before we get here, we store "1" in "$t7" (this will be used later)
-  //   * because the reps is 0, this runs through into the low_and_load block of code
-  //   * the low_and_load block loads the second instruction (as above, is 0)
-  //   * this simulates an end of current run (or a wait)
-  //   * we catch the fact that $t7 is 1 (see above) and jump back to wait_loop (the upper wait_loop in the "high" section)
-  //   *   while branching we set $t7 to 0 so it doesn't get caught again
-  //   * this executes the upper block (hopefully caching it) and then jumps to the low_and_load block (because reps is 0 still)
-  //   * we then load in the first instruction and jump to "go_high" (which may be delayed slightly because we haven't cached it yet, but that's ok, it just delays the start very slightly!)
-  // I think this will fill the cache with the asm instructions so execution is faster
-  // Without this, we see the first clock tick of the first sequence be slower than it should be  
-  asm volatile ("start: bne $t7, $zero, wait_loop2\n\t");
+
+  #if defined(__PIC32MZXX__)
+    // We:
+    //   * have the first 2 instructions by full of 0's
+    //   * jump to the low half of the wait loop (wait_loop2)
+    //   *   before we get here, we store "1" in "$t7" (this will be used later)
+    //   * because the reps is 0, this runs through into the low_and_load block of code
+    //   * the low_and_load block loads the second instruction (as above, is 0)
+    //   * this simulates an end of current run (or a wait)
+    //   * we catch the fact that $t7 is 1 (see above) and jump back to wait_loop (the upper wait_loop in the "high" section)
+    //   *   while branching we set $t7 to 0 so it doesn't get caught again
+    //   * this executes the upper block (hopefully caching it) and then jumps to the low_and_load block (because reps is 0 still)
+    //   * we then load in the first instruction and jump to "go_high" (which may be delayed slightly because we haven't cached it yet, but that's ok, it just delays the start very slightly!)
+    // I think this will fill the cache with the asm instructions so execution is faster
+    // Without this, we see the first clock tick of the first sequence be slower than it should be  
+    asm volatile ("start: bne $t7, $zero, wait_loop2\n\t");
+      asm volatile ("nop\n\t");
+    
+    //
+    // Start of main execution loop
+    //
+    asm volatile ("high: sw $t1, 0($t0)\n\t");
+    //iterate over the high half-period
+    asm volatile ("wait_loop: bne $t3, $zero, wait_loop\n\t");
+      asm volatile ("addi $t3, -1\n\t");
+    // load the half-period again
+    asm volatile ("lw $t3, 0($t2)\n\t");
+    // nop's to balance out the loop (and make the length of the loop a nice number)
+    asm volatile ("nop\n\t");
+    asm volatile ("nop\n\t");
     asm volatile ("nop\n\t");
   
-  //
-  // Start of main execution loop
-  //
-  asm volatile ("high: sw $t1, 0($t0)\n\t");
-  //iterate over the high half-period
-  asm volatile ("wait_loop: bne $t3, $zero, wait_loop\n\t");
-    asm volatile ("addi $t3, -1\n\t");
-  // load the half-period again
-  asm volatile ("lw $t3, 0($t2)\n\t");
-  // nop's to balance out the loop (and make the length of the loop a nice number)
-  asm volatile ("nop\n\t");
-  asm volatile ("nop\n\t");
-  asm volatile ("nop\n\t");
-
-  // if this is the last "rep", then branch to the section that loads the next instruction
-  asm volatile ("beq $t4, $zero, low_and_load\n\t");
-    asm volatile("sw $zero, 0($t0)\n\t"); 
-
-  // iterate over the low half-period
-  asm volatile ("wait_loop2: bne $t3, $zero, wait_loop2\n\t");
-    asm volatile ("addi $t3, -1\n\t");
-  // load the half-period again
-  asm volatile ("lw $t3, 0($t2)\n\t");
-  // nop's to balance out the loop (and make the length of the loop a nice number)
-  asm volatile ("nop\n\t");
-  asm volatile ("nop\n\t");
-
-  // branch to the top and decrease the "rep" counter
-  // Note: This will always execute because if $t4==0 then we branch earlier
-  //       Except, if we are precaching the asm instructions, in which case we roll right through this line
-  asm volatile ("bne $t4, $zero, high\n\t");
+    // if this is the last "rep", then branch to the section that loads the next instruction
+    asm volatile ("beq $t4, $zero, low_and_load\n\t");
+      asm volatile("sw $zero, 0($t0)\n\t"); 
+  
+    // iterate over the low half-period
+    asm volatile ("wait_loop2: bne $t3, $zero, wait_loop2\n\t");
+      asm volatile ("addi $t3, -1\n\t");
+    // load the half-period again
+    asm volatile ("lw $t3, 0($t2)\n\t");
+    // nop's to balance out the loop (and make the length of the loop a nice number)
+    asm volatile ("nop\n\t");
+    asm volatile ("nop\n\t");
+  
+    // branch to the top and decrease the "rep" counter
+    // Note: This will always execute because if $t4==0 then we branch earlier
+    //       Except, if we are precaching the asm instructions, in which case we roll right through this line
+    asm volatile ("bne $t4, $zero, high\n\t");
+      asm volatile ("addi $t4, -1\n\t");
+  
+    //
+    //This section only runs if we are on the last "rep" of an instruction and need to load the next instruction
+    //
+    // increment the instruction pointer
+    asm volatile ("low_and_load: addi $t2, 8\n\t"); 
+    // iterate over the low half-period (from the previous instruction)
+    asm volatile ("wait_loop3: bne $t3, $zero, wait_loop3\n\t");
+      asm volatile ("addi $t3, -1\n\t");
+    // load the half-period again (for the next instruction)
+    asm volatile ("lw $t3, 0($t2)\n\t");
+    // nop's to balance out the loop (and make the length of the loop a nice number)
+    asm volatile ("nop\n\t");
+    // branch if the half-period is not zero (and load the number of "reps")
+    asm volatile ("bne $t3, $zero, high\n\t");
+      asm volatile ("lw $t4, 4($t2)\n\t");
+  
+    // branch back to first wait loop if we are precaching instructions still
+    asm volatile ("bne $t7, $zero, wait_loop\n\t");
+      asm volatile ("li $t7, 0x0\n\t");
+    //
+    // END OF PRECACHED ASM INSTRUCTIONS
+    //
+  #else
+    // We need to get up to the right part of the waveform, we don't want the initial digital low.
+    // We want to start with a digital high. So let's set the period to some small constant, and wait
+    // until it is about to go high, switching the period to our first instruction at just the right moment:
+    asm volatile ("start: sw $t8, 0($t0)\n\t"); 
+    asm volatile ("sw $t8, 0($t1)\n\t");
+  
+    // update the period of the output:
+    asm volatile ("top: sw $t3, 0($t0)\n\t"); 
+    asm volatile ("sw $t3, 0($t1)\n\t");
+    // wiat for the delay time:
+    asm volatile ("wait_loop: bne $t4, $zero, wait_loop\n\t");
     asm volatile ("addi $t4, -1\n\t");
-
-  //
-  //This section only runs if we are on the last "rep" of an instruction and need to load the next instruction
-  //
-  // increment the instruction pointer
-  asm volatile ("low_and_load: addi $t2, 8\n\t"); 
-  // iterate over the low half-period (from the previous instruction)
-  asm volatile ("wait_loop3: bne $t3, $zero, wait_loop3\n\t");
-    asm volatile ("addi $t3, -1\n\t");
-  // load the half-period again (for the next instruction)
-  asm volatile ("lw $t3, 0($t2)\n\t");
-  // nop's to balance out the loop (and make the length of the loop a nice number)
-  asm volatile ("nop\n\t");
-  // branch if the half-period is not zero (and load the number of "reps")
-  asm volatile ("bne $t3, $zero, high\n\t");
-    asm volatile ("lw $t4, 4($t2)\n\t");
-
-  // branch back to first wait loop if we are precaching instructions still
-  asm volatile ("bne $t7, $zero, wait_loop\n\t");
-    asm volatile ("li $t7, 0x0\n\t");
-  //
-  // END OF PRECACHED ASM INSTRUCTIONS
-  //
+    // load the next half-period in:
+    asm volatile ("lw $t3, 8($t2)\n\t");
+    // increment our instruction pointer:
+    asm volatile ("addi $t2, 8\n\t");
+    // go to the top of the loop if it's not a stop instruction:
+    asm volatile ("bne $t3, $zero, top\n\t");
+    //load the the next delay time in:
+    asm volatile ("lw $t4, 4($t2)\n\t"); 
+    
+    // We got a stop instruction (indicated by half_period==0). Disable output:
+    asm volatile ("sw $zero, 0($t7)\n\t");
+  #endif
 
   // We might be stopping for good, or we might be resuming after a hardware trigger.
   // In case of the latter (indicated by reps != 0), 
@@ -263,21 +316,21 @@ void start_bitblaster(int mode)
   }
   Serial.println("ok");
   // Any serial communication will now reset the CPU:
-  Serial.attachInterrupt(serialInterruptDuringRun);
   // do the magic
   for (nloops = 0; ; ++nloops) {
+    Serial.attachInterrupt(serialInterruptDuringRun);
     digitalWrite(PIN_LED2,HIGH);
     LATASET = 0x1;      // indicate the run has begun
     run_bitblaster(mode & 0x1);    // do the work
     LATACLR = 0x1;      // indicate the run has ended
     WDTCONSET = 0x1;    // set watchdog WDTCLR bit
     digitalWrite(PIN_LED2,LOW);
+    // no longer reset on serial communication:
+    Serial.detachInterrupt();
     if ((mode & 0x2) == 0) break;
     Serial.println(nloops);
   }
   
-  // no longer reset on serial communication:
-  Serial.detachInterrupt();
   
   Serial.println("done");
 }
@@ -290,7 +343,11 @@ void run_bitblaster(int autostart)
   // tell the assembler to do exactly what we say (make sure to undo later)
   asm volatile (".set noreorder\n\t");
   // load the address of the output buffer into register $t0
-  asm volatile ("la $t0, LATB\n\t");
+  #if defined(__PIC32MZXX__)  
+    asm volatile ("la $t0, LATE\n\t");
+  #else
+    asm volatile ("la $t0, LATB\n\t");
+  #endif
   asm volatile ("la $t1, LATAINV\n\t");
   asm volatile ("li $t8, 0x4\n\t");
   // load the instructions array into register $t2
@@ -298,9 +355,9 @@ void run_bitblaster(int autostart)
   // load the time into register $t3
   asm volatile ("lhu $t3, 2($t2)\n\t"); 
   // load the port value into register $t4
-  asm volatile ("lhu $t4, 0($t2)\n\t"); 
-  // load the address of IPC0 into register $t6
-  asm volatile ("la $t6, IPC0\n\t");
+  asm volatile ("lhu $t4, 0($t2)\n\t");   
+  // store the number to count down to in the loop (0 for the cache instruction and then set to 1 later)
+  //asm volatile ("li $s6, 0\n\t");
   
   // if not autostart, wait for trigger
   if (!autostart) {
@@ -366,6 +423,7 @@ void run_bitblaster(int autostart)
     asm volatile ("lhu $t4, 0($t2)\n\t"); // load value within branch slot
 
   // branch back to top of instruction loop if we have just finished precaching the asm instructions
+  //asm volatile ("li $s6, 1\n\t");
   asm volatile ("bne $t5, $zero, output\n\t");
     asm volatile ("li $t5, 0x0\n\t");
   
@@ -382,7 +440,11 @@ void run_bitblaster(int autostart)
   
   // *** all done ***
   asm volatile ("end_bits: nop\n\t");
-  if (!hold_final) LATB = 0x0;
+  #if defined(__PIC32MZXX__)
+    if (!hold_final) LATE = 0x0;
+  #else
+    if (!hold_final) LATB = 0x0;
+  #endif
   
   // CRITICAL: undo the "noreorder" command (see issue #3)
   asm volatile (".set reorder\n\t");
@@ -417,8 +479,13 @@ void setup(){
   instructions[3] = 0;
   
   // configure the digital ports
-  TRISB = 0;      // set PORTB to become entirely outputs
-  LATB = 0;       // set PORTB to LO
+  #if defined(__PIC32MZXX__)  
+    TRISE = 0;      // set PORTE to become entirely outputs
+    LATE = 0;       // set PORTE to LO
+  #else
+    TRISB = 0;      // set PORTB to become entirely outputs
+    LATB = 0;       // set PORTB to LO
+  #endif
   TRISACLR = 0x7; // set bits 0--2 of PORTA to be outputs
   LATACLR = 0x7;  // set those bits to LO
   
@@ -440,8 +507,9 @@ void setup(){
 
 int set_bits(int i, uint32_t val, uint32_t ts)
 {
-    
-  i++; // increment i as the first instruction should always be 0 (used to precache the asm instructions)
+  #if defined(__PIC32MZXX__)    
+    i++; // increment i as the first instruction should always be 0 (used to precache the asm instructions)
+  #endif
   if (i >= (2*max_instructions))
     Serial.println("invalid address");
   else if (ts == 0) {
@@ -471,7 +539,9 @@ int set_bits(int i, uint32_t val, uint32_t ts)
 
 int get_bits(int i, uint32_t *val, uint32_t *len)
 {
-  i++; // increment i as the first instruction should always be 0 (used to precache the asm instructions)
+  #if defined(__PIC32MZXX__)  
+    i++; // increment i as the first instruction should always be 0 (used to precache the asm instructions)
+  #endif
 
   if (!val || !len)
     return -1;
@@ -487,7 +557,11 @@ int get_bits(int i, uint32_t *val, uint32_t *len)
 
 int instruction_empty(int i)
 {
-  return (instructions[i+1]!=0)?1:0;
+  #if defined(__PIC32MZXX__)  
+    return (instructions[i+1]!=0)?1:0;
+  #else
+    return (instructions[i]!=0)?1:0;
+  #endif
 }
 
 void loop(){
@@ -496,13 +570,37 @@ void loop(){
     Serial.println("hello");
   }
   else if ((strcmp(cmdstr, "go high") == 0)||(strncmp(cmdstr, "hi", 2) == 0)) {
-    // write entire port HI
-    LATB = 0xFFFF;
+    #if defined(__PIC32MZXX__)  
+      // write entire port HI
+      LATE = 0xFFFF;
+    #else
+      if (mode == 0)
+      {
+        digitalWrite(5,HIGH);
+      }
+      else
+      {
+        // write entire port HI
+        LATB = 0xFFFF;
+      }
+    #endif
     Serial.println("ok");
   }
   else if ((strcmp(cmdstr, "go low") == 0)||(strncmp(cmdstr, "lo", 2) == 0)) {
-    // write entire port LO
-    LATB = 0;
+    #if defined(__PIC32MZXX__)  
+      // write entire port LO
+      LATE = 0;
+    #else
+      if (mode == 0)
+      {
+        digitalWrite(5,LOW);
+      }
+      else
+      {
+        // write entire port LO
+        LATB = 0;
+      }
+    #endif
     Serial.println("ok");
   }
   else if (strcmp(cmdstr, "reset") == 0){
@@ -523,7 +621,7 @@ void loop(){
   else if (strncmp(cmdstr, "setmode ", 8) == 0){
     unsigned int newmode;
     int parsed = sscanf(cmdstr,"%*s %u",&newmode);
-    if ((parsed < 1) || (mode != 0 and mode != 1)){
+    if ((parsed < 1) || (newmode != 0 and newmode != 1)){
         Serial.println("invalid request");
     }
     else
@@ -560,16 +658,19 @@ void loop(){
         Serial.println("invalid address");
       }
       else if (half_period == 0){
+        #if defined(__PIC32MZXX__)
+          addr = addr+2; // account for the two cache instructions (or 4 entries in the array) that must stay 0
+        #endif
         // This indicates either a stop or a wait instruction
-        instructions[2*(addr+2)] = 0;
+        instructions[2*addr] = 0;
         if (reps == 0){
           // It's a stop instruction
-          instructions[2*(addr+2)+1] = 0;
+          instructions[2*addr+1] = 0;
           Serial.println("ok");
         }
         else if (reps == 1){
           // It's a wait instruction:
-          instructions[2*(addr+2)+1] = 1;
+          instructions[2*addr+1] = 1;
           Serial.println("ok");
         }
         else{
@@ -583,8 +684,8 @@ void loop(){
         Serial.println("reps must be at least one");
       }
       else{
-        instructions[2*(addr+2)] = half_period - 4;
-        instructions[2*(addr+2)+1] = reps - 1;
+        instructions[2*addr] = half_period - 4;
+        instructions[2*addr+1] = reps - 1;
         Serial.println("ok");
       }
     }
