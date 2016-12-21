@@ -1,5 +1,6 @@
 Original work Copyright (c) 2013, Christopher Billington
 Modified work Copyright (c) 2015, Martijn Jasperse
+Modified work Copyright (c) 2016, Philip Starkey
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
