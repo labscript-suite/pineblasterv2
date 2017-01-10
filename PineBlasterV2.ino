@@ -24,7 +24,7 @@
 
 #if defined(__PIC32MZXX__)
 // number of instructions the chipkit wifire can hold
-const unsigned int max_instructions = 64350; //8*7450;
+const unsigned int max_instructions = 64350; 
 #else
 // number of instructions the chipkit MAX32 can hold
 const unsigned int max_instructions = 15050;
@@ -41,7 +41,7 @@ int mode = 0;
 volatile int hold_final = 1;
 #define MIN_PULSE 6 //TODO: Fix this for bitblaster, define for pineblaster
 
-#define DEBUG 1
+#define DEBUG 0
 
 void __attribute__((naked, nomips16)) Reset(void){
   // does a software reset of the CPU:
@@ -79,9 +79,10 @@ void start_clock(){
   int incomplete = 1;
   int runcache = 1;
   while (incomplete==1){
-    #if DEBUG==1
-      Serial.println("DEBUG: calling run()");
-    #endif
+    // uncommenting this will unforntunately cause the board to reset due to the above interrupt
+    //#if DEBUG==1
+    //  Serial.println("DEBUG: calling run()");
+    //#endif
     run_clock(runcache);
     autostart = 0;
     runcache = 0;
@@ -540,7 +541,7 @@ int set_bits(int i, uint32_t val, uint32_t ts)
 int get_bits(int i, uint32_t *val, uint32_t *len)
 {
   #if defined(__PIC32MZXX__)  
-    i++; // increment i as the first instruction should always be 0 (used to precache the asm instructions)
+    i++; // increment i as the first instruction should always be set to a value of 0 (used to precache the asm instructions)
   #endif
 
   if (!val || !len)
