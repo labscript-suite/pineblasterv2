@@ -10,4 +10,4 @@ Using an external trigger has been tested to work, but we have not yet verified 
 
 We encourage uses to contact us on the [labscript suite mailing list](https://groups.google.com/forum/#!forum/labscriptsuite) to discuss the development of this project!
 
-Note: This project was forked from the BitBlaster which was in turn forked from the PineBlaster.
+Note: This project was forked from the BitBlaster (archived [here](https://github.com/labscript-suite-bitbucket-archive/martijnj-bitblaster--forked-from--labscript_suite-pineblaster)) which was in turn forked from the [PineBlaster](https://github.com/labscript-suite/pineblaster).
