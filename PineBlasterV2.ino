@@ -190,7 +190,7 @@ void run_clock(int runcache){
   //    * Does the commented out code achieve the sam ething in less instructions?
   // once the wait is complete, detach the interrupt so future triggers do not 
   // slow down the execution
-  //detachInterrupt(); 
+  //detachInterrupt(0); 
 //  IEC0bits.INT0IE  = 0;  
 //  setIntPriority(0, 0, 0); // this will disable the interrupt
 //  /* Compute the address of the interrupt priority control register used
