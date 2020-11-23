@@ -30,6 +30,7 @@ const unsigned int max_instructions = 64350;
 const unsigned int max_instructions = 15050;
 #endif
 int autostart;
+volatile int reset_on_serial = 0;
 unsigned int instructions[2*max_instructions + 6]; // 3 extra instructions (2 32-bit ints per instruction). two initial blank instructions (for the caching hack) and 1 for stop instruction at end
 volatile unsigned int * resume_address = instructions;
 
@@ -42,6 +43,20 @@ volatile int hold_final = 1;
 #define MIN_PULSE 6 //TODO: Fix this for bitblaster, define for pineblaster
 
 #define DEBUG 0
+void __attribute__((naked, at_vector(24), nomips16)) IntSer0Handler(void){
+  // This interrupt is called whenever serial communication arrives. We
+  // intercept it and decide whether to treat it as ordinary serial communication,
+  // or as an abort signal (for when the sequence is running). In the case of an abort signal,
+  // we can reset the CPU.
+  // Load in the address of reset_on_serial:
+  asm volatile ("la $k0, reset_on_serial\n\t");
+  // load in the value of reset_on_serial:
+  asm volatile ("lw $k0, 0($k0)\n\t");
+  // if it's zero, do the usual serial handler:
+  asm volatile ("beq $k0, $zero, IntSer0Handler\n\t");
+  // Otherwise, do a reset! (jump to the below function)
+  asm volatile ("j reset\n\t");
+}
 
 void __attribute__((naked, nomips16)) Reset(void){
   // does a software reset of the CPU:
@@ -74,7 +89,8 @@ void start_clock(){
     Serial.println("DEBUG: attaching serial interrupt");
   #endif
   // Any serial communication will now reset the CPU:
-  Serial.attachInterrupt(serialInterruptDuringRun);
+  //Serial.attachInterrupt(serialInterruptDuringRun);
+  reset_on_serial = 1;
   
   int incomplete = 1;
   int runcache = 1;
@@ -174,7 +190,7 @@ void run_clock(int runcache){
   //    * Does the commented out code achieve the sam ething in less instructions?
   // once the wait is complete, detach the interrupt so future triggers do not 
   // slow down the execution
-  detachInterrupt(0); 
+  //detachInterrupt(0); 
 //  IEC0bits.INT0IE  = 0;  
 //  setIntPriority(0, 0, 0); // this will disable the interrupt
 //  /* Compute the address of the interrupt priority control register used
@@ -503,7 +519,7 @@ void setup(){
   digitalWrite(PIN_LED2,LOW);
 
   // Announce we are ready!
-  Serial.println("ready");
+  //Serial.println("ready");
 }
 
 int set_bits(int i, uint32_t val, uint32_t ts)
